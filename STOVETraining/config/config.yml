@@ -1,0 +1,75 @@
+EXPERIMENT:
+    run_name: billards
+    experiment_dir: experiments
+    overwrite: False
+    load_run: False
+    run_number: 0
+    device: cuda
+    log_every: 250
+    seed: 0
+    random_seed: False
+
+MODULE:
+    MONET:
+        latent_dim: 32
+        background_latent_dim: 1
+        latent_prior: 1.0
+        patch_shape:
+        - 32
+        - 32
+        image_shape:
+        - 128
+        - 128
+        bg_sigma: 0.01
+        fg_sigma: 0.05
+        num_blocks: 1
+        channel_base: 8
+        num_slots: 8
+        beta: 1.0
+        gamma: 0.1
+        constrain_theta: False
+        predict_masks: False
+    STOVE:
+        action_conditioned: True
+        supairvised: False
+        cl: 128
+        debug_test_mode: False
+        skip: 2
+        debug_fix_supair: True
+        debug_match_appearance: False
+        debug_no_latents: False
+    DYNAMICS:
+        debug_nonlinear: 'relu'
+        debug_latent_q_std: 0.04
+        debug_xavier: False
+        transition_lik_std:
+        - 0.01
+        - 0.01
+        - 0.01
+        - 0.01
+        pos_var: 0.3
+        action_space: 6
+
+TRAINING:
+    optimizer:
+        optimizer_name: Adam
+        lr: 0.0001
+    batch_size: 16
+    epochs: 100
+    reshape: False
+    summarize: False
+    parallel: True
+    decay_rate: 0.95
+    decay_schedule: 1
+
+DATA:
+    data_name: billards
+    data_dir: data/avoidance_train.pkl
+    type: directory
+    shape:
+        - 128
+        - 128
+        - 3
+    transform:
+        - reshape
+        - torch

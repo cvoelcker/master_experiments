@@ -1,0 +1,9 @@
+EXPERIMENT:
+    run_name: debug
+    experiment_dir: experiments
+    overwrite: False
+    load_run: False
+    run_number: 0
+
+TRAINING:
+    optimizer: Adam
