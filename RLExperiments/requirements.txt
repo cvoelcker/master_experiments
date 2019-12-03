@@ -1,0 +1,13 @@
+numpy
+matplotlib
+torch
+sklearn
+gym
+gym-retro
+graph_nets 
+tensorflow==1.8
+tensorflow-gpu==1.8
+dill
+tqdm
+opencv-python
+cloudpickle

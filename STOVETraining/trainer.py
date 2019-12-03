@@ -4,12 +4,13 @@ from torch_runner.train.base import AbstractTrainer
 
 class MONetTrainer(AbstractTrainer):
 
-    def train_step(self, data):
+    def train_step(self, data, **kwargs):
         # torch.autograd.set_detect_anomaly(True)
-        loss, data_dict, r = self.model(data['X'], 0, data['action'].cuda().float())
+        loss, data_dict, r = self.model(data['X'], 0, data['action'].cuda().float(), pretrain=kwargs['pretrain'])
         self.optimizer.zero_grad()
         torch.mean(-1. * loss).backward()
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), 50)
+        if self.clip_gradient:
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_gradient_value)
         for n, p in self.model.named_parameters():
             if p.grad is not None:
                 # print(f'{n}: {p.grad.max()} {p.grad.min()} {p.grad.mean()}')
@@ -28,8 +29,12 @@ class MONetTrainer(AbstractTrainer):
             return False
         return True
 
+    def append_epoch_info_dict(self, epoch_info_dict, data_dict):
+        return data_dict
+
     def compile_epoch_info_dict(self, data_dict):
-        return {'model_state': self.model.state_dict()}
+        return {'model_state': self.model.state_dict(),}
+                #'imgs': (data_dict['imgs'] * 255).type_as(torch.ByteTensor())}
 
 
 class MONetTester(AbstractTrainer):
@@ -37,14 +42,14 @@ class MONetTester(AbstractTrainer):
     def train_step(self, data):
         with torch.no_grad():
         # torch.autograd.set_detect_anomaly(True)
+            print(data['X'].shape)
             loss, data_dict, r = self.model(data['X'], 0, data['action'].cuda().float())
-            z_full, r = self.model.rollout(
+            z_full, imgs, r = self.model.rollout(
                     data_dict['z_s'][:, -1].cuda().float(),
-                    num = 7,
-                    actions=data['action'].cuda().float())
-            print(z_full.max())
-            print(z_full.mean())
-        return {'z': z_full, 'r': r}
+                    num = data['action'].shape[1],
+                    actions=data['action'].cuda().float(),
+                    return_imgs=True)
+            return {'z': z_full, 'r': r, 'imgs': (imgs * 255).type_as(torch.ByteTensor())}
 
     def check_ready(self):
         if self.train_dataloader is None:

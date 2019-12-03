@@ -1,0 +1,7 @@
+*.save
+**/logging/
+**/.mypy_cache/
+**/__pycache__/
+*.pkl
+*.zip
+*.swp

@@ -1,0 +1,66 @@
+EXPERIMENT:
+  algorithm: a2c
+
+PATHS:
+  model_save_path: data/models/try_1/
+  object_model_save_path: om.ckpt
+  image_save_path: data/images/demon_attack_nowhite/
+
+ENV_INFO:
+  name: DemonAttackNoFrameskip-v4
+
+TRAIN_SPEC:
+  optimizer: RMSprop
+  episodes: 10000000
+  trajectory_length: 5
+  gamma: 0.99
+  step_size: 0.0007
+  step_size_decay: 0.00001
+  num_envs: 32
+  device: cuda
+  norm_clip: 10.
+  herke: False
+  entropy_coeff: 0.01
+  value_coeff: 0.5
+  image_coeff: 1.
+  train_object_model: False
+
+INPUT_SPEC:
+  training_image_shape: 
+          - 128
+          - 128
+          - 3
+  embedding_size: 32
+  num_frames: 4
+  num_stacked: 4
+
+MODEL_SPEC:
+  use_image_model: True
+  load_pretrained_object_model: True
+  gradient_through_image: True
+  only_image_model: False
+  
+  replace_relational_with_noise: False
+  replace_image_with_noise: False
+
+MONET:
+  latent_dim: 16
+  background_latent_dim: 1
+  latent_prior: 1.0
+  patch_shape: 
+  - 16
+  - 16
+  image_shape: 
+  - 128
+  - 128
+  bg_sigma: 0.01
+  fg_sigma: 0.05
+  num_blocks: 3
+  channel_base: 8
+  num_slots: 6
+  beta: 1.0
+  constrain_theta: False
+
+LOGGING:
+  tb_name: full
+  tb_logging_path: test
