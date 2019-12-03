@@ -23,6 +23,11 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 config, config_object = load_config()
+print(config)
+
+load_run = config.EXPERIMENT.load_run
+run_name = config.EXPERIMENT.run_name
+run_number = config.EXPERIMENT.run_number
 
 if config.EXPERIMENT.random_seed:
     seed = np.random.randint(2**32 - 1)
@@ -34,8 +39,8 @@ else:
     np.random.seed(config.EXPERIMENT.seed)
     torch.manual_seed(config.EXPERIMENT.seed)
 
-monet = get_model(config, MONetStove).cuda()
 config, config_object = setup_experiment(config, config_object, debug=False)
+monet = get_model(config, MONetStove, load_run, run_name, run_number).cuda()
 
 run_path = get_run_path(
         config.EXPERIMENT.experiment_dir,
@@ -45,26 +50,41 @@ run_path = get_run_path(
 data_config = config.DATA
 training_config = config.TRAINING
 
-source_loader = file_loaders.FileLoader(
-        file_name=data_config.data_dir, 
-        compression_type='pickle')
-# env = gym.make('DemonAttack-v0')
-# source_loader = generators.FunctionLoader(
-#         generate_envs_data,
-#         {'env': env, 'num_runs': 100, 'run_len': 100})
+if config.EXPERIMENT.experiment == 'billards':
+        source_loader = file_loaders.FileLoader(
+                file_name=data_config.data_dir, 
+                compression_type='pickle')
+        # env = gym.make('DemonAttack-v0')
+        # source_loader = generators.FunctionLoader(
+        #         generate_envs_data,
+        #         {'env': env, 'num_runs': 100, 'run_len': 100})
 
-transformers = [
-        transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
-        transformers.TypeTransformer(config.EXPERIMENT.device)
-        ]
+        transformers = [
+                transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
+                transformers.TypeTransformer(config.EXPERIMENT.device)
+                ]
+
+elif config.EXPERIMENT.experiment == 'atari':
+        env = gym.make('DemonAttack-v0')
+        source_loader = generators.FunctionLoader(
+                generate_envs_data,
+                {'env': env, 'num_runs': 200, 'run_len': 100})
+
+        transformers = [
+                transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
+                transformers.TypeTransformer(config.EXPERIMENT.device)
+                ]
 
 data = SequenceDictDataSet(source_loader, transformers, 8)
 
 trainer = setup_trainer(MONetTrainer, monet, training_config, data)
+
 checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
 trainer.register_handler(checkpointing)
+
 regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'), log_name_list=['imgs'])
 trainer.register_handler(regular_logging)
+
 tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean']
 tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
 trainer.register_handler(tb_logger)

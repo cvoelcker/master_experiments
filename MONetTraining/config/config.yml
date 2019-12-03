@@ -5,36 +5,37 @@ EXPERIMENT:
     load_run: False
     run_number: 0
     device: cuda
-    log_every: 250
+    log_every: 50
 
 MODULE:
-    latent_dim: 64
-    background_latent_dim: 1
-    latent_prior: 1.0
-    patch_shape:
-    - 16
-    - 16
-    image_shape:
-    - 64
-    - 64
-    bg_sigma: 0.01
-    fg_sigma: 0.05
-    num_blocks: 2
-    channel_base: 8
-    num_slots: 8
-    beta: 1.0
-    gamma: 1.0
-    constrain_theta: False
+  latent_dim: 16
+  background_latent_dim: 1
+  latent_prior: 1.0
+  patch_shape: 
+  - 16
+  - 16
+  image_shape: 
+  - 128
+  - 128
+  bg_sigma: 0.01
+  fg_sigma: 0.05
+  num_blocks: 1
+  channel_base: 8
+  num_slots: 6
+  beta: 1.0
+  constrain_theta: False
 
 TRAINING:
     optimizer:
         optimizer_name: Adam
         lr: 0.0007
-    batch_size: 64
+    batch_size: 128
     epochs: 100
     reshape: False
     summarize: False
     parallel: True
+    clip_gradient: True
+    clip_gradient_value: 50
 
 DATA:
     data_name: billards
