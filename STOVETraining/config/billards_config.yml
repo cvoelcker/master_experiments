@@ -63,6 +63,7 @@ TRAINING:
     decay_schedule: 10
     clip_gradient: True
     clip_gradient_value: 10
+    pretrain: False
 
 DATA:
     data_name: billards

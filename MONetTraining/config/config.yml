@@ -1,5 +1,5 @@
 EXPERIMENT:
-    run_name: billards
+    run_name: atari
     experiment_dir: experiments
     overwrite: False
     load_run: False
@@ -8,7 +8,7 @@ EXPERIMENT:
     log_every: 50
 
 MODULE:
-  latent_dim: 16
+  latent_dim: 32
   background_latent_dim: 1
   latent_prior: 1.0
   patch_shape: 
@@ -19,7 +19,7 @@ MODULE:
   - 128
   bg_sigma: 0.01
   fg_sigma: 0.05
-  num_blocks: 1
+  num_blocks: 2
   channel_base: 8
   num_slots: 6
   beta: 1.0
@@ -28,22 +28,22 @@ MODULE:
 TRAINING:
     optimizer:
         optimizer_name: Adam
-        lr: 0.0007
-    batch_size: 128
-    epochs: 100
+        lr: 0.0001
+    batch_size: 64
+    epochs: 50
     reshape: False
     summarize: False
     parallel: True
     clip_gradient: True
-    clip_gradient_value: 50
+    clip_gradient_value: 20
 
 DATA:
     data_name: billards
-    data_dir: test_billards
+    data_dir: test_atari
     type: directory
     shape:
-        - 64
-        - 64
+        - 128
+        - 128
         - 3
     transform:
         - reshape

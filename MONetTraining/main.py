@@ -1,6 +1,7 @@
 import os
 
 from torchvision import transforms
+import torch
 
 from config_parser.config_parser import ConfigGenerator
 from spatial_monet.spatial_monet import MaskedAIR
@@ -28,8 +29,7 @@ training_config = config.TRAINING
 
 source_loader = file_loaders.DirectoryLoader(
         directory=data_config.data_dir, 
-        compression_type='pickle', 
-        preprocess_function = lambda x: x['X'].reshape(-1, *config.DATA.shape))
+        compression_type='gzip')
 
 transformers = [
         transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
@@ -41,9 +41,13 @@ data = BasicDataSet(source_loader, transformers)
 trainer = setup_trainer(MONetTrainer, monet, training_config, data)
 checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
 trainer.register_handler(checkpointing)
-regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'))
-trainer.register_handler(regular_logging)
 tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=['loss', 'kl_loss', 'mask_loss', 'p_x_loss'])
 trainer.register_handler(tb_logger)
+
+# MONet init block
+# for w in trainer.model.parameters():
+#     std_init = 0.01
+#     torch.nn.init.normal_(w, mean=0., std=std_init)
+trainer.model.init_background_weights(trainer.train_dataloader.dataset.get_all())
 
 trainer.train(config.TRAINING.epochs, train_only=True)

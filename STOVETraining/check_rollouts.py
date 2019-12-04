@@ -15,7 +15,7 @@ from torch_runner.training_setup import setup_trainer
 from torch_runner.handlers import file_handler, tb_handler
 
 from trainer import MONetTrainer, MONetTester
-from monet_stove import MONetStove
+from models.monet_stove import MONetStove
 
 from get_model import get_model
 from data import generate_envs_data

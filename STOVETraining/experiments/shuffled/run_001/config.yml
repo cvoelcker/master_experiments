@@ -10,6 +10,7 @@ DATA:
   - torch
   type: directory
 EXPERIMENT:
+  experiment: billards
   device: cuda
   experiment_dir: experiments
   load_run: false
@@ -60,6 +61,7 @@ MODULE:
     skip: 2
     supairvised: false
 TRAINING:
+  pretrain: false
   batch_size: 128
   clip_gradient: true
   clip_gradient_value: 10

@@ -4,8 +4,8 @@ import torch
 from torch_runner.experiment_setup import get_run_path, find_next_run_number
 
 from spatial_monet.spatial_monet import MaskedAIR
-from monet_stove import MONetStove
-from dynamics import Dynamics
+from models.monet_stove import MONetStove
+from models.dynamics import Dynamics
 
 
 def get_model(config, model_class, load_run, run_name, run_number):

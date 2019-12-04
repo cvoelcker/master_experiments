@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from torch_runner.train.base import AbstractTrainer
@@ -32,7 +33,9 @@ class MONetTrainer(AbstractTrainer):
     def append_epoch_info_dict(self, epoch_info_dict, data_dict):
         return data_dict
 
-    def compile_epoch_info_dict(self, data_dict):
+    def compile_epoch_info_dict(self, data_dict, epoch, **kwargs):
+        if 'pretrain' in kwargs:
+            self.model.img_model.beta = 1 / (1 + np.sigmoid(epoch))
         return {'model_state': self.model.state_dict(),}
                 #'imgs': (data_dict['imgs'] * 255).type_as(torch.ByteTensor())}
 
@@ -60,5 +63,5 @@ class MONetTester(AbstractTrainer):
             return False
         return True
 
-    def compile_epoch_info_dict(self, data_dict):
+    def compile_epoch_info_dict(self, data_dict, e, **kwargs):
         return {'model_state': self.model.state_dict()}

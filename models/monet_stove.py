@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.distributions import Exponential, MultivariateNormal, Normal
 from torch.distributions.kl import kl_divergence
 
-from dynamics import Dynamics
+from .dynamics import Dynamics
 from spatial_monet.spatial_monet import MaskedAIR
 
 
@@ -795,7 +795,7 @@ class MONetStove(nn.Module):
         self.pretrain = pretrain
 
         if pretrain:
-            loss, d = self.img_model(x)
-            return loss,d, None
+            loss, d = self.img_model(x.flatten(end_dim=1))
+            return -1. * loss,d, None
         else:
             return self.stove_forward(x, actions=actions)

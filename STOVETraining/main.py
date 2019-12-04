@@ -14,7 +14,7 @@ from torch_runner.training_setup import setup_trainer
 from torch_runner.handlers import file_handler, tb_handler
 
 from trainer import MONetTrainer
-from monet_stove import MONetStove
+from models.monet_stove import MONetStove
 
 from get_model import get_model
 from data import generate_envs_data
@@ -85,9 +85,26 @@ trainer.register_handler(checkpointing)
 regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'), log_name_list=['imgs'])
 trainer.register_handler(regular_logging)
 
-tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean']
+tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean', 'p_x_loss', 'p_x_loss_mean']
 tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
 trainer.register_handler(tb_logger)
 
-trainer.train(config.TRAINING.epochs, train_only=True)
+trainer.model.img_model.init_background_weights(trainer.train_dataloader.dataset.get_all())
 
+trainer.train(config.TRAINING.epochs, train_only=True, pretrain=config.TRAINING.pretrain)
+
+if config.TRAINING.pretrain:
+        monet.img_model.beta = config.MODULE.MONET.beta
+        trainer = setup_trainer(MONetTrainer, monet, training_config, data)
+        
+        checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
+        trainer.register_handler(checkpointing)
+        
+        regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'), log_name_list=['imgs'])
+        trainer.register_handler(regular_logging)
+        
+        tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean', 'p_x_loss_mean']
+        tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
+        trainer.register_handler(tb_logger)
+
+        trainer.train(config.TRAINING.epochs * 10, train_only=True, pretrain=False)
