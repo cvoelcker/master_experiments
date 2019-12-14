@@ -1,0 +1,99 @@
+EXPERIMENT:
+    experiment: rl
+    run_name: billards
+    experiment_dir: experiments
+    overwrite: False
+    load_run: False
+    run_number: 0
+    device: cuda
+    log_every: 50
+    seed: 0
+    random_seed: False
+    pretrain_model: False
+    pretrain_img: False
+RL:
+  exploration_steps: 4
+  total_steps: 1000000
+  action_force: 0.6
+  combined_nets: true
+MODULE:
+    SLAC:
+        QNET:
+        POLICY:
+        rl_lr: 0.0001
+        latent_lr: 0.0001
+        update_steps_latent: 1
+        update_steps_rl: 1
+        update_target_steps: 1
+        grad_clip_model: 20
+        grad_clip_rl: 10
+        initial_alpha: 0.5
+        target_gamma: 0.995
+        debug: False
+    MONET:
+        latent_dim: 4
+        background_latent_dim: 1
+        latent_prior: 1.0
+        patch_shape:
+        - 8
+        - 8
+        image_shape:
+        - 32
+        - 32
+        bg_sigma: 0.01
+        fg_sigma: 0.05
+        num_blocks: 2
+        channel_base: 8
+        num_slots: 3
+        beta: 1.0
+        gamma: 0.1
+        constrain_theta: False
+        predict_masks: False
+    STOVE:
+        action_conditioned: True
+        supairvised: False
+        cl: 64
+        debug_test_mode: False
+        skip: 2
+        debug_fix_supair: True
+        debug_match_appearance: False
+        debug_no_latents: False
+        dyn_recon_weight: 0.
+    DYNAMICS:
+        debug_nonlinear: 'relu'
+        debug_latent_q_std: 0.04
+        debug_xavier: False
+        transition_lik_std:
+        - 0.01
+        - 0.01
+        - 0.01
+        - 0.01
+        pos_var: 0.3
+        action_space: 9
+TRAINING:
+    optimizer:
+        optimizer_name: Adam
+        lr: 0.0003
+    batch_size: 256
+    epochs: 10
+    reshape: False
+    summarize: False
+    parallel: True
+    decay_rate: 0.99
+    decay_schedule: 1
+    clip_gradient: True
+    clip_gradient_value: 20
+    pretrain: True
+    total_rl_steps: 500000
+    rl_batch_size: 64
+DATA:
+    data_name: billards
+    data_dir: data/avoidance_train.pkl
+    type: directory
+    shape:
+        - 32
+        - 32
+        - 3
+    transform:
+        - reshape
+        - torch

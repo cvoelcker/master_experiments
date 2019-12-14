@@ -1,5 +1,6 @@
 EXPERIMENT:
     run_name: billards
+    experiment: billards
     experiment_dir: experiments
     overwrite: False
     load_run: False
@@ -11,7 +12,7 @@ EXPERIMENT:
 
 MODULE:
     MONET:
-        latent_dim: 8
+        latent_dim: 4
         background_latent_dim: 1
         latent_prior: 1.0
         patch_shape:
@@ -22,7 +23,7 @@ MODULE:
         - 64
         bg_sigma: 0.01
         fg_sigma: 0.05
-        num_blocks: 1
+        num_blocks: 2
         channel_base: 8
         num_slots: 3
         beta: 1.0
@@ -32,12 +33,13 @@ MODULE:
     STOVE:
         action_conditioned: True
         supairvised: False
-        cl: 64
+        cl: 32
         debug_test_mode: False
         skip: 2
         debug_fix_supair: False
         debug_match_appearance: False
         debug_no_latents: False
+        dyn_recon_weight: 0.
     DYNAMICS:
         debug_nonlinear: 'relu'
         debug_latent_q_std: 0.04
@@ -54,16 +56,16 @@ TRAINING:
     optimizer:
         optimizer_name: Adam
         lr: 0.0001
-    batch_size: 128
-    epochs: 200
+    batch_size: 32
+    epochs: 10
     reshape: False
     summarize: False
     parallel: True
-    decay_rate: 0.9
-    decay_schedule: 10
+    decay_rate: 0.99
+    decay_schedule: 1
     clip_gradient: True
-    clip_gradient_value: 10
-    pretrain: False
+    clip_gradient_value: 50
+    pretrain: True
 
 DATA:
     data_name: billards

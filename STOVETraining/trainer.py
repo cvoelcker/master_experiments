@@ -7,7 +7,7 @@ class MONetTrainer(AbstractTrainer):
 
     def train_step(self, data, **kwargs):
         # torch.autograd.set_detect_anomaly(True)
-        loss, data_dict, r = self.model(data['X'], 0, data['action'].cuda().float(), pretrain=kwargs['pretrain'])
+        loss, data_dict, r = self.model(data['X'], actions=data['action'].cuda().float(), pretrain=kwargs['pretrain'])
         self.optimizer.zero_grad()
         torch.mean(-1. * loss).backward()
         if self.clip_gradient:
@@ -46,7 +46,7 @@ class MONetTester(AbstractTrainer):
         with torch.no_grad():
         # torch.autograd.set_detect_anomaly(True)
             print(data['X'].shape)
-            loss, data_dict, r = self.model(data['X'], 0, data['action'].cuda().float())
+            loss, data_dict, r = self.model(data['X'], actions=data['action'].cuda().float())
             z_full, imgs, r = self.model.rollout(
                     data_dict['z_s'][:, -1].cuda().float(),
                     num = data['action'].shape[1],

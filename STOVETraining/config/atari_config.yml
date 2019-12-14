@@ -39,6 +39,7 @@ MODULE:
         debug_fix_supair: True
         debug_match_appearance: False
         debug_no_latents: False
+        dyn_recon_weight: 0.
     DYNAMICS:
         debug_nonlinear: 'relu'
         debug_latent_q_std: 0.04
@@ -60,7 +61,7 @@ TRAINING:
     reshape: False
     summarize: False
     parallel: True
-    decay_rate: 0.95
+    decay_rate: 0.99
     decay_schedule: 1
     clip_gradient: True
     clip_gradient_value: 50

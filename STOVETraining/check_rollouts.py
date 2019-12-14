@@ -18,7 +18,7 @@ from trainer import MONetTrainer, MONetTester
 from models.monet_stove import MONetStove
 
 from get_model import get_model
-from data import generate_envs_data
+from util.data import generate_envs_data
 
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -57,17 +57,32 @@ run_path = get_run_path(
 data_config = config.DATA
 training_config = config.TRAINING
 
-source_loader = file_loaders.FileLoader(
-        file_name=data_config.data_dir, 
-        compression_type='pickle')
+if config.EXPERIMENT.experiment == 'billards':
+        source_loader = file_loaders.FileLoader(
+                file_name=data_config.data_dir, 
+                compression_type='pickle')
+        # env = gym.make('DemonAttack-v0')
+        # source_loader = generators.FunctionLoader(
+        #         generate_envs_data,
+        #         {'env': env, 'num_runs': 100, 'run_len': 100})
 
-transformers = [
-        transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
-        transformers.TypeTransformer(config.EXPERIMENT.device)
-        ]
+        transformers = [
+                transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
+                transformers.TypeTransformer(config.EXPERIMENT.device)
+                ]
+
+elif config.EXPERIMENT.experiment == 'atari':
+        env = gym.make('DemonAttack-v0')
+        source_loader = generators.FunctionLoader(
+                generate_envs_data,
+                {'env': env, 'num_runs': 200, 'run_len': 100})
+
+        transformers = [
+                transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
+                transformers.TypeTransformer(config.EXPERIMENT.device)
+                ]
 
 data = SequenceDictDataSet(source_loader, transformers, 50)
-
 
 trainer = setup_trainer(MONetTester, monet, training_config, data)
 

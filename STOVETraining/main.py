@@ -17,7 +17,7 @@ from trainer import MONetTrainer
 from models.monet_stove import MONetStove
 
 from get_model import get_model
-from data import generate_envs_data
+from util.data import generate_envs_data
 
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -107,4 +107,4 @@ if config.TRAINING.pretrain:
         tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
         trainer.register_handler(tb_logger)
 
-        trainer.train(config.TRAINING.epochs * 10, train_only=True, pretrain=False)
+        trainer.train(config.TRAINING.epochs * 20, train_only=True, pretrain=False)

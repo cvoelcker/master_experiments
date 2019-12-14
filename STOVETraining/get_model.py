@@ -6,6 +6,7 @@ from torch_runner.experiment_setup import get_run_path, find_next_run_number
 from spatial_monet.spatial_monet import MaskedAIR
 from models.monet_stove import MONetStove
 from models.dynamics import Dynamics
+from models.slac_stove import SLACAgent, GraphHead, GraphQNet, GraphPolicyNet
 
 
 def get_model(config, model_class, load_run, run_name, run_number):
@@ -31,18 +32,19 @@ def get_model(config, model_class, load_run, run_name, run_number):
         path = os.path.join(path, 'model_state_{:07d}.save'.format(checkpoint_number))
         model_state_dict = torch.load(path)
         stove.load_state_dict(model_state_dict)
-    # if hasattr(ex, 'load_monet') and ex.load_monet:
-    #     path = get_run_path(ex.monet.experiment_dir, ex.monet.run_name, ex.monet.run_number)
-    #     path = os.path.join(path, 'checkpoints')
-    #     if not os.path.exists(path):
-    #         print('Found no model checkpoints')
-    #         sys.exit(1)
-    #     try:
-    #         checkpoint_number = ex.checkpoint_number
-    #     except AttributeError as e:
-    #         print('Did not specify checkpoint number, using last available')
-    #         checkpoint_number = find_next_run_number(path) - 1
-    #     path = os.path.join(path, 'model_{:03d}'.format(checkpoint_number))
-    #     model_state_dict = torch.load(path)
-    #     monet.load_state_dict(model_state_dict)
     return stove
+
+
+def get_rl_model(config, load_run, run_name, run_number):
+    print('SLAC reload is not implemented yet!')
+
+    # path for joint graph head for policy and qnet (joint actor critic nets for better rep learning)
+    graph_head = GraphHead(config.SLAC.GRAPH)
+    q_net = GraphQNet(graph_head)
+
+    qnet = models
+    pass
+
+
+def get_slac(config, monet, qnet, policy):
+    pass
