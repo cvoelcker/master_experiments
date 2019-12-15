@@ -16,8 +16,10 @@ from torch_runner.handlers import file_handler, tb_handler
 from trainer import MONetTrainer
 from util.data import generate_envs_data
 
-all_games = \
-['adventure', 'air_raid', 'alien', 'amidar', 'assault', 'asterix', 'asteroids', 'atlantis', 'bank_heist', 'battle_zone', 'beam_rider', 'berzerk', 'bowling', 'boxing', 'breakout', 'carnival', 'centipede', 'chopper_command', 'crazy_climber', 'defender', 'demon_attack', 'double_dunk', 'elevator_action', 'enduro', 'fishing_derby', 'freeway', 'frostbite', 'gopher', 'gravitar', 'hero', 'ice_hockey', 'jamesbond', 'journey_escape', 'kangaroo', 'krull', 'kung_fu_master', 'montezuma_revenge', 'ms_pacman', 'name_this_game', 'phoenix', 'pitfall', 'pong', 'pooyan', 'private_eye', 'qbert', 'riverraid', 'road_runner', 'robotank', 'seaquest', 'skiing', 'solaris', 'space_invaders', 'star_gunner', 'tennis', 'time_pilot', 'tutankham', 'up_n_down', 'venture', 'video_pinball', 'wizard_of_wor', 'yars_revenge', 'zaxxon']
+all_games = [
+        'adventure', 'air_raid', 'alien', 'amidar', 'assault', 'asterix', 'asteroids', 'atlantis', 'bank_heist', 'battle_zone', 'beam_rider', 'berzerk', 'bowling', 'boxing', 'breakout', 'carnival', 'centipede', 'chopper_command', 'crazy_climber', 
+        # 'defender',  ## apparently, this is really broken
+        'demon_attack', 'double_dunk', 'elevator_action', 'enduro', 'fishing_derby', 'freeway', 'frostbite', 'gopher', 'gravitar', 'hero', 'ice_hockey', 'jamesbond', 'journey_escape', 'kangaroo', 'krull', 'kung_fu_master', 'montezuma_revenge', 'ms_pacman', 'name_this_game', 'phoenix', 'pitfall', 'pong', 'pooyan', 'private_eye', 'qbert', 'riverraid', 'road_runner', 'robotank', 'seaquest', 'skiing', 'solaris', 'space_invaders', 'star_gunner', 'tennis', 'time_pilot', 'tutankham', 'up_n_down', 'venture', 'video_pinball', 'wizard_of_wor', 'yars_revenge', 'zaxxon']
 
 all_games = [''.join((s.capitalize() for s in g.split('_'))) + '-v0' for g in all_games]
 
@@ -34,8 +36,9 @@ data_config = config.DATA
 training_config = config.TRAINING
 
 for game in all_games:
-
+        print('Running {}'.format(game))
         monet = get_model(config, MaskedAIR).cuda()
+        print('Generated model')
         env = gym.make(game)
         
         source_loader = generators.FunctionLoader(
@@ -46,9 +49,9 @@ for game in all_games:
                 transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
                 transformers.TypeTransformer(config.EXPERIMENT.device)
                 ]
-
+        print('Loading data')
         data = BasicDataSet(source_loader, data_transformers)
-        
+        print('Setting up trainer')
         trainer = setup_trainer(MONetTrainer, monet, training_config, data)
         check_path = os.path.join(run_path, 'checkpoints_{}'.format(game))
         if not os.path.exists(check_path):
@@ -59,6 +62,7 @@ for game in all_games:
         if not os.path.exists(log_path):
                 os.mkdir(log_path)
         tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging_{}'.format(game), log_name_list=['loss', 'kl_loss', 'mask_loss', 'p_x_loss'])
+        print('Running training')
         trainer.register_handler(tb_logger)
         
         # MONet init block

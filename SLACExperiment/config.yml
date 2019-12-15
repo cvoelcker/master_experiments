@@ -1,4 +1,5 @@
 EXPERIMENT:
+    game: billards
     experiment: rl
     run_name: billards
     experiment_dir: experiments
@@ -13,9 +14,10 @@ EXPERIMENT:
     pretrain_img: False
 RL:
   exploration_steps: 4
-  total_steps: 1000000
   action_force: 0.6
+  eval_epochs: 100
   combined_nets: true
+  use_stove: True
 MODULE:
     SLAC:
         QNET:
@@ -28,8 +30,9 @@ MODULE:
         grad_clip_model: 20
         grad_clip_rl: 10
         initial_alpha: 0.5
-        target_gamma: 0.995
+        target_gamma: 0.999
         debug: False
+        slac_latent_dim: 64
     MONET:
         latent_dim: 4
         background_latent_dim: 1
@@ -84,8 +87,8 @@ TRAINING:
     clip_gradient: True
     clip_gradient_value: 20
     pretrain: True
-    total_rl_steps: 500000
     rl_batch_size: 64
+    total_steps: 100000
 DATA:
     data_name: billards
     data_dir: data/avoidance_train.pkl

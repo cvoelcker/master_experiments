@@ -82,8 +82,9 @@ class SLACAgent():
     def update_model(self, batch):
         obs = batch['x']
         actions = batch['a']
+        rewards = batch['r']
         mask = torch.cumsum(batch['d'], -1)
-        loss, _, _ = self.model(obs, actions=actions, mask=mask)
+        loss, _, _ = self.model(obs, actions, rewards, mask)
         (-1*loss).mean().backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip_model)
         self.optim_model.step()
@@ -124,8 +125,8 @@ class SLACAgent():
         # run optimizers (TODO: check if gradients in latents are nott interferring)
         self.optim_step(self.optim_q_1, q1_loss, self.q_1, self.grad_clip_rl, retain=True)
         self.optim_step(self.optim_q_2, q2_loss, self.q_2, self.grad_clip_rl, retain=True)
-        self.optim_step(self.optim_p, policy_loss, self.policy, self.grad_clip_rl, retain=False)
-        self.optim_step(self.optim_e, entropy_loss, self.alpha, 0, no_clip=True, retain=False)
+        # self.optim_step(self.optim_p, policy_loss, self.policy, self.grad_clip_rl, retain=False)
+        # self.optim_step(self.optim_e, entropy_loss, self.alpha, 0, no_clip=True, retain=False)
         self.alpha = self.log_alpha.exp()
 
         return q1_loss.detach(), q2_loss.detach(), policy_loss.detach(), self.alpha.detach(), -mean_entropies
@@ -142,12 +143,12 @@ class SLACAgent():
     def calc_critic_loss(self, latents, next_latents, actions, rewards, dones):
         with torch.no_grad():
             # calculate one step lookahead of policy
-            _, probs, entropies = self.policy.sample(next_latents)
+            _, probs, _ = self.policy.sample(next_latents)
             next_q1 = self.q_1_target(next_latents)
             next_q2 = self.q_2_target(next_latents)
             next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
             next_q = torch.sum(next_q, -1)
-            target_q = (rewards + self.gamma * next_q)
+            target_q = (rewards + (1. - dones) * self.gamma * next_q)
 
         curr_q1 = self.q_1(latents)
         curr_q1 = curr_q1.gather(-1, actions) # get the correct part of the multi action q function
@@ -162,7 +163,7 @@ class SLACAgent():
         return q1_loss, q2_loss
 
     def calc_policy_loss(self, latents):
-        _, probs, entropies = self.policy(latents)
+        _, probs, _ = self.policy(latents)
         with torch.no_grad():
             q1 = self.q_1(latents)
             q2 = self.q_2(latents)
@@ -212,6 +213,13 @@ class SLACAgent():
         for p in copy_net.parameters():
             p.requires_grad = False
         return copy_net
+
+
+def flatten_probs(action_probs, min_prob=0.001):
+    action_space = action_probs.shape[-1]
+    action_probs = (min_prob / action_space) + (1 - min_prob) * action_probs
+    return action_probs
+
 
     
 class GraphHead(nn.Module):
@@ -390,87 +398,56 @@ class GraphPolicyNet(nn.Module):
     
     def forward(self, s):
         action_probs = self.p_head(self.graph_head(s))
-        min_probs = torch.ones_like(action_probs) * 0.001 / self.action_space
-        action_probs = min_probs + 0.999 * action_probs
+        action_probs = flatten_probs(action_probs)
         dist = torch.distributions.Categorical(probs = action_probs)
-        return dist, action_probs, dist.entropy()
+        return dist, action_probs, action_probs.log()
 
     def sample(self, s):
-        dist, probs, entropy = self(s)
-        return dist.sample(), probs, entropy
+        dist, probs, log_probs = self(s)
+        return dist.sample(), probs, log_probs
 
 
-class ImagePolicyNet(nn.Module):
-    def __init__(self, img_size, action_space, latent_size=256):
-        self.image_encoder = nn.Sequential(
-            nn.Conv2d(3, 16, 3, 2, 1),
+class LinearPolicyNet(nn.Module):
+
+    def __init__(self, latent_size, action_space):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Linear(latent_size, 256),
             nn.ReLU(),
-            nn.Conv2d(16, 32, 3, 2, 1),
+            nn.Linear(256, 128),
             nn.ReLU(),
-            nn.Conv2d(32, 64, 3, 2, 1),
+            nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Flatten()
+            nn.Linear(64, action_space),
+            nn.Softmax(-1)
         )
-        image_output = 64 * (img_size.shape[1]/8) * (img_size.shape[1]/8)
-        self.recurrent = nn.GRUCell(image_output + action_space, latent_size)
-        self.mlp = nn.Sequential(
-            nn.Linear(latent_size, latent_size//2),
-            nn.ReLU(),
-            nn.Linear(latent_size//2, latent_size//4),
-            nn.ReLU(),
-            nn.Linear(latent_size//4, action_space)
-        )
-        hidden_prior = torch.distributions.Normal(0., 0.01)
-        self.latent_size = latent_size
+        self.action_space = action_space
 
-    def forward(self, image, action, hidden):
-        batch = image.shape[0]
-        if hidden is None:
-            hidden = self.init_hidden(batch)
-        T = image.shape[1]
-        for t in range(T):
-            image_embedding = self.image_encoder(image[:, t])
-            lstm_input = torch.cat((image_embedding, action[:, t]), -1)
-            hidden = self.recurrent(lstm_input, hidden)
-        action_probs = self.mlp(hidden)
-        # hard min to prevent entropy collapse
-        min_probs = torch.ones_like(action_probs) * 0.01
-        action_probs = min_probs + 0.99 * action_probs
+    def forward(self, x):
+        action_probs = self.encoder(x)
+        action_probs = flatten_probs(action_probs)
         dist = torch.distributions.Categorical(probs = action_probs)
-        return dist, action_probs, dist.entropy()
+        return dist, action_probs, action_probs.log()
 
-    def sample(self, s, eval=False):
-        dist, probs, entropy = self(s)
-        if eval:
-            return dist.sample(), probs, entropy
-        else:
-            return dist.sample(), probs, entropy
-    
-    def init_hidden(self, batch):
-        return hidden_prior.sample((batch, self.latent_size))
+    def sample(self, s):
+        dist, probs, log_probs = self(s)
+        return dist.sample(), probs, log_probs
 
 
-class VariationalTimeSeriesNet(nn.Module):
-    def __init__(self, input_shape, ):
+class LinearQNet(nn.Module):
 
-        # latent encoder
+    def __init__(self, latent_size, action_space):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Linear(latent_size, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, action_space)
+        )
+        self.action_space = action_space
 
-
-        # latent decoder
-
-
-        # latent propagation component
-
-
-        # priors
-
-        pass
-    
-    def forward(self, x, a, r):
-        pass
-    
-    def calc_loss(self):
-        pass
-
-    def combine_latent(self, mu_im, std_im, mu_dyn, std_dyn):
-        pass
+    def forward(self, x):
+        return self.encoder(x)

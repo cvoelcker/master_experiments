@@ -500,7 +500,7 @@ class MONetStove(nn.Module):
         else:
             return z_full, rewards
 
-    def forward(self, x, actions=None, pretrain=False, mask=None):
+    def forward(self, x, actions=None, rewards=None, mask=None, pretrain=False):
         """Forward function.
 
         Can be used to train (action-conditioned) video prediction or

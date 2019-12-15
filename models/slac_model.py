@@ -1,16 +1,58 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
+import torch.distributions as dists
+from torch.distributions.kl import kl_divergence
 import numpy as np
+
+
+class BaseNetwork(nn.Module):
+    def save(self, path):
+        torch.save(self.state_dict(), path)
+
+    def load(self, path):
+        self.load_state_dict(torch.load(path))
+
+
+def create_linear_network(input_dim, output_dim, hidden_units=[256, 256],
+                          hidden_activation=nn.ReLU(), output_activation=None,):
+    model = []
+    units = input_dim
+    for next_units in hidden_units:
+        model.append(nn.Linear(units, next_units))
+        model.append(hidden_activation)
+        units = next_units
+
+    model.append(nn.Linear(units, output_dim))
+    if output_activation is not None:
+        model.append(output_activation)
+
+    return nn.Sequential(*model)
+
+
+def calc_kl_divergence(p_list, q_list):
+    assert len(p_list) == len(q_list)
+
+    kld = 0.0
+    for i in range(len(p_list)):
+        # (N, L) shaped array of kl divergences.
+        _kld = kl_divergence(p_list[i], q_list[i])
+        # Average along batches, sum along sequences and elements.
+        kld += _kld.mean(dim=0).sum()
+
+    return kld
 
 
 class SLACModel(nn.Module):
 
-    def __init__(self, observation_shape, action_shape, feature_dim=256,
-                 latent1_dim=32, latent2_dim=256, hidden_units=[256, 256],
+    def __init__(self, observation_shape, action_shape, feature_dim=64,
+                 latent1_dim=32, latent2_dim=32, hidden_units=[64, 64],
                  leaky_slope=0.2):
-        self.latent = LatentNetwork(observation_shape, action_shape, feature_dim=256,
-                 latent1_dim=32, latent2_dim=256, hidden_units=[256, 256],
-                 leaky_slope=0.2)
+        super().__init__()
+        self.latent = LatentNetwork(observation_shape, action_shape, feature_dim=feature_dim,
+                 latent1_dim=latent1_dim, latent2_dim=latent2_dim, hidden_units=hidden_units,
+                 leaky_slope=leaky_slope)
+        self.cl = feature_dim
 
     def forward(self, images_seq, actions_seq, rewards_seq,
                          dones_seq):
@@ -36,31 +78,38 @@ class SLACModel(nn.Module):
 
         # Log likelihood loss of genarated rewards.
         rewards_seq_dists = self.latent.reward_predictor([
-            latent1_post_samples[:, :-1],
-            latent2_post_samples[:, :-1],
-            actions_seq, latent1_post_samples[:, 1:],
-            latent2_post_samples[:, 1:]])
+            latent1_post_samples,
+            latent2_post_samples,
+            actions_seq, latent1_post_samples,
+            latent2_post_samples])
         reward_log_likelihoods =\
-            rewards_seq_dists.log_prob(rewards_seq) * (1.0 - dones_seq)
+            rewards_seq_dists.log_prob(rewards_seq.unsqueeze(-1)) * (1.0 - dones_seq).unsqueeze(-1)
         reward_log_likelihood_loss = reward_log_likelihoods.mean(dim=0).sum()
 
         latent_loss =\
             kld_loss - log_likelihood_loss - reward_log_likelihood_loss
 
-        return latent_loss
+        return -1 * latent_loss, None, None
     
     def infer_latent(self, images_seq, actions_seq):
         features_seq = self.latent.encoder(images_seq)
 
+        # from IPython.core.debugger import Tracer
+        # Tracer()()
         # Sample from posterior dynamics.
         (latent1_post_samples, latent2_post_samples),\
             (latent1_post_dists, latent2_post_dists) =\
             self.latent.sample_posterior(features_seq, actions_seq)
-        return torch.cat((latent1_post_samples, latent2_post_samples), -1)
+        latents = torch.cat((latent1_post_samples, latent2_post_samples), -1)
+        return latents
 
     def update_latent(self, new_image, new_action, last_latent):
-        features = self.latent.encode(new_image)
-        return self.latent.sample_posterior(features, new_action, last_latent)
+        features = self.latent.encoder(new_image)
+        (latent1_post_samples, latent2_post_samples),\
+            (latent1_post_dists, latent2_post_dists) =\
+            self.latent.sample_posterior(features, new_action)
+        latents = torch.cat((latent1_post_samples, latent2_post_samples), -1)
+        return latents[:, -1]
 
 
 class Gaussian(BaseNetwork):
@@ -71,8 +120,7 @@ class Gaussian(BaseNetwork):
         self.net = create_linear_network(
             input_dim, 2*output_dim if std is None else output_dim,
             hidden_units=hidden_units,
-            hidden_activation=nn.LeakyReLU(leaky_slope),
-            initializer=weights_init_xavier)
+            hidden_activation=nn.LeakyReLU(leaky_slope),)
 
         self.std = std
 
@@ -88,7 +136,7 @@ class Gaussian(BaseNetwork):
             mean, std = torch.chunk(x, 2, dim=-1)
             std = F.softplus(std) + 1e-5
 
-        return Normal(loc=mean, scale=std)
+        return dists.Normal(loc=mean, scale=std)
 
 
 class ConstantGaussian(BaseNetwork):
@@ -137,7 +185,7 @@ class Decoder(BaseNetwork):
         x = self.net(x)
         _, C, W, H = x.size()
         x = x.view(num_batches, num_sequences, C, W, H)
-        return Normal(loc=x, scale=torch.ones_like(x) * self.std)
+        return dists.Normal(loc=x, scale=torch.ones_like(x) * self.std)
 
 
 class Encoder(BaseNetwork):
@@ -174,8 +222,8 @@ class Encoder(BaseNetwork):
 
 class LatentNetwork(BaseNetwork):
 
-    def __init__(self, observation_shape, action_shape, feature_dim=256,
-                 latent1_dim=32, latent2_dim=256, hidden_units=[256, 256],
+    def __init__(self, observation_shape, action_shape, feature_dim=64,
+                 latent1_dim=32, latent2_dim=32, hidden_units=[64, 64],
                  leaky_slope=0.2):
         super(LatentNetwork, self).__init__()
         # NOTE: We encode x as the feature vector to share convolutional
@@ -191,11 +239,11 @@ class LatentNetwork(BaseNetwork):
             latent1_dim, latent2_dim, hidden_units, leaky_slope=leaky_slope)
         # p(z1(t+1) | z2(t), a(t))
         self.latent1_prior = Gaussian(
-            latent2_dim + action_shape[0], latent1_dim, hidden_units,
+            latent2_dim + action_shape, latent1_dim, hidden_units,
             leaky_slope=leaky_slope)
         # p(z2(t+1) | z1(t+1), z2(t), a(t))
         self.latent2_prior = Gaussian(
-            latent1_dim + latent2_dim + action_shape[0], latent2_dim,
+            latent1_dim + latent2_dim + action_shape, latent2_dim,
             hidden_units, leaky_slope=leaky_slope)
 
         # q(z1(0) | feat(0))
@@ -205,22 +253,22 @@ class LatentNetwork(BaseNetwork):
         self.latent2_init_posterior = self.latent2_init_prior
         # q(z1(t+1) | feat(t+1), z2(t), a(t))
         self.latent1_posterior = Gaussian(
-            feature_dim + latent2_dim + action_shape[0], latent1_dim,
+            feature_dim + latent2_dim + action_shape, latent1_dim,
             hidden_units, leaky_slope=leaky_slope)
         # q(z2(t+1) | z1(t+1), z2(t), a(t)) = p(z2(t+1) | z1(t+1), z2(t), a(t))
         self.latent2_posterior = self.latent2_prior
 
         # p(r(t) | z1(t), z2(t), a(t), z1(t+1), z2(t+1))
         self.reward_predictor = Gaussian(
-            2 * latent1_dim + 2 * latent2_dim + action_shape[0],
+            2 * latent1_dim + 2 * latent2_dim + action_shape,
             1, hidden_units, leaky_slope=leaky_slope)
 
         # feat(t) = x(t) : This encoding is performed deterministically.
         self.encoder = Encoder(
-            observation_shape[0], feature_dim, leaky_slope=leaky_slope)
+            observation_shape[2], feature_dim, leaky_slope=leaky_slope)
         # p(x(t) | z1(t), z2(t))
         self.decoder = Decoder(
-            latent1_dim + latent2_dim, observation_shape[0],
+            latent1_dim + latent2_dim, observation_shape[2],
             std=np.sqrt(0.1), leaky_slope=leaky_slope)
 
     def sample_prior(self, actions_seq, init_features=None):
@@ -242,7 +290,7 @@ class LatentNetwork(BaseNetwork):
         latent1_dists = []
         latent2_dists = []
 
-        for t in range(num_sequences + 1):
+        for t in range(num_sequences):
             if t == 0:
                 # Condition on initial frames.
                 if init_features is not None:
@@ -303,7 +351,7 @@ class LatentNetwork(BaseNetwork):
         latent1_dists = []
         latent2_dists = []
 
-        for t in range(num_sequences + 1):
+        for t in range(num_sequences):
             if t == 0 and last_latent is None:
                 # q(z1(0) | feat(0))
                 latent1_dist = self.latent1_init_posterior(features_seq[t])
@@ -312,7 +360,9 @@ class LatentNetwork(BaseNetwork):
                 latent2_dist = self.latent2_init_posterior(latent1_sample)
                 latent2_sample = latent2_dist.rsample()
             elif t==0 and last_latent is not None:
+                latent1_dist = self.latent1_init_posterior(features_seq[t])
                 latent1_sample = last_latent[..., :self.latent1_dim]
+                latent2_dist = self.latent2_init_posterior(latent1_sample)
                 latent2_sample = last_latent[..., self.latent1_dim:]
             else:
                 # q(z1(t) | feat(t), z2(t-1), a(t-1))
@@ -335,26 +385,3 @@ class LatentNetwork(BaseNetwork):
         return (latent1_samples, latent2_samples),\
             (latent1_dists, latent2_dists)
 
-
-class BaseNetwork(nn.Module):
-    def save(self, path):
-        torch.save(self.state_dict(), path)
-
-    def load(self, path):
-        self.load_state_dict(torch.load(path))
-
-
-def create_linear_network(input_dim, output_dim, hidden_units=[256, 256],
-                          hidden_activation=nn.ReLU(), output_activation=None,):
-    model = []
-    units = input_dim
-    for next_units in hidden_units:
-        model.append(nn.Linear(units, next_units))
-        model.append(hidden_activation)
-        units = next_units
-
-    model.append(nn.Linear(units, output_dim))
-    if output_activation is not None:
-        model.append(output_activation)
-
-    return nn.Sequential(*model)

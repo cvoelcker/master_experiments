@@ -60,7 +60,10 @@ training_config = config.TRAINING
 
 #############################################
 # potential MONet STOVE Pretrain for better initialization
-env = AvoidanceTask(BillardsEnv(), action_force=config.RL.action_force)
+if config.EXPERIMENT.game == 'billards':
+    env = AvoidanceTask(BillardsEnv(), action_force=config.RL.action_force)
+else:
+    env = gym.make(config.EXPERIMENT.game)
 
 source_loader = generators.FunctionLoader(
         generate_envs_data,
@@ -105,13 +108,14 @@ if config.EXPERIMENT.pretrain_model:
             trainer.register_handler(tb_logger)
 
             trainer.train(config.TRAINING.epochs * 10, train_only=True, pretrain=False)
+    monet.img_model.beta = config.MODULE.MONET.beta
 
 
 ##################################################################################
 # build RL full trainer
 env.reset()
 
-memory = buffer.StateBuffer(500000, config.DATA.shape, 7, config.MODULE.DYNAMICS.action_space)
+memory = buffer.StateBuffer(500000, config.DATA.shape, 8, config.MODULE.DYNAMICS.action_space)
 for i in range(200):
     memory.put(data.dataset['X'][i], 
     np.argmax(data.dataset['action'][i], -1).reshape(-1),
@@ -130,4 +134,4 @@ tb_logging_list = ['q1', 'q2', 'p', 'e', 'm', 'ent', 'rolling_reward']
 tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
 trainer.register_handler(tb_logger)
 
-trainer.train(config.TRAINING.total_rl_steps, config.TRAINING.rl_batch_size, config.MODULE.SLAC.debug)
+trainer.train(config.TRAINING.total_steps, config.TRAINING.rl_batch_size, config.MODULE.SLAC.debug)

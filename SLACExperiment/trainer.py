@@ -16,7 +16,7 @@ class RLTrainer(AbstractTrainer):
         self.eval_env = copy.deepcopy(env)
         self.done = False
         self.obs, self.latents = self.init_latent(self.env)
-        self.eval_epochs = 100
+        self.eval_epochs = config.eval_epochs
         self.eval_every = 5000
 
         self.exploration_steps = config.exploration_steps
