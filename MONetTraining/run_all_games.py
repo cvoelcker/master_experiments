@@ -2,6 +2,7 @@ import os
 
 from torchvision import transforms
 import torch
+from torch import nn
 import gym
 
 from config_parser.config_parser import ConfigGenerator
@@ -36,9 +37,11 @@ run_path = get_run_path(
 data_config = config.DATA
 training_config = config.TRAINING
 
-for game in all_games:
+print('running first half')
+l = len(all_games)
+for game in all_games[int(l/2):]:
         print('Running {}'.format(game))
-        monet = Monet(**config.MODULE._asdict()).cuda()
+        monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
         print('Generated model')
         env = gym.make(game)
         
