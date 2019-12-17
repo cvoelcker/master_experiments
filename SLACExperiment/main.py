@@ -13,10 +13,10 @@ from torch_runner.data.base import BasicDataSet, SequenceDataSet, SequenceDictDa
 from torch_runner.training_setup import setup_trainer
 from torch_runner.handlers import file_handler, tb_handler
 
-from trainer import RLTrainer, MONetTrainer
+from trainer import SLACTrainer, SACTrainer, MONetTrainer
 from models.monet_stove import MONetStove
 
-from get_model import get_latent_model, get_rl_models, get_slac
+from get_model import get_latent_model, get_rl_models, get_slac, get_sac
 from util.data import generate_envs_data
 from util import buffer
 from util.envs import BillardsEnv, AvoidanceTask
@@ -43,12 +43,13 @@ else:
 config, config_object = setup_experiment(config, config_object, debug=False)
 
 monet = get_latent_model(config, MONetStove, load_run, run_name, run_number).cuda()
-policy, qnet, qnet2 = get_rl_models(config, load_run, run_name, run_number)
-policy = policy.cuda()
-qnet = qnet.cuda()
-qnet2 = qnet2.cuda()
 
-slac = get_slac(config, monet, qnet, qnet2, policy)
+if config.EXPERIMENT.algorithm == 'slac':
+    policy, qnet, qnet2 = get_rl_models(config, load_run, run_name, run_number)
+    slac = get_slac(config, monet, qnet, qnet2, policy)
+elif config.EXPERIMENT.algorithm == 'sac':
+    policy, qnet, qnet2 = get_rl_models(config, load_run, run_name, run_number)
+    slac = get_sac(config, monet, qnet, qnet2, policy)
 
 run_path = get_run_path(
         config.EXPERIMENT.experiment_dir,
@@ -90,7 +91,7 @@ if config.EXPERIMENT.pretrain_model:
     tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
     trainer.register_handler(tb_logger)
     
-    trainer.model.img_model.init_background_weights(trainer.train_dataloader.dataset.get_all())
+    # trainer.model.img_model.init_background_weights(trainer.train_dataloader.dataset.get_all())
     
     trainer.train(config.TRAINING.epochs, train_only=True, pretrain=config.EXPERIMENT.pretrain_img)
     if config.EXPERIMENT.pretrain_img:
@@ -122,7 +123,10 @@ for i in range(200):
     data.dataset['reward'][i].reshape(-1), 
     data.dataset['done'][i].reshape(-1))
 
-trainer = RLTrainer(config.RL, slac, env, memory)
+if config.EXPERIMENT.algorithm == 'slac':
+    trainer = SLACTrainer(config.RL, slac, env, memory)
+elif config.EXPERIMENT.algorithm == 'sac':
+    trainer = SACTrainer(config.RL, slac, env, memory)
 
 checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
 trainer.register_handler(checkpointing)

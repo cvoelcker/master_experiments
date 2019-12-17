@@ -12,6 +12,7 @@ EXPERIMENT:
     random_seed: False
     pretrain_model: False
     pretrain_img: False
+    algorithm: slac
 RL:
   exploration_steps: 4
   action_force: 0.6
@@ -73,6 +74,7 @@ MODULE:
         - 0.01
         pos_var: 0.3
         action_space: 9
+        num_dynamics: 2
 TRAINING:
     optimizer:
         optimizer_name: Adam

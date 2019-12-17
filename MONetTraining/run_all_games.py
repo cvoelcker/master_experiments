@@ -6,6 +6,7 @@ import gym
 
 from config_parser.config_parser import ConfigGenerator
 from spatial_monet.spatial_monet import MaskedAIR
+from spatial_monet.monet import Monet
 
 from torch_runner.experiment_setup import setup_experiment, load_config, get_model, get_run_path
 from torch_runner.data import transformers, file_loaders, generators
@@ -37,7 +38,7 @@ training_config = config.TRAINING
 
 for game in all_games:
         print('Running {}'.format(game))
-        monet = get_model(config, MaskedAIR).cuda()
+        monet = Monet(**config.MODULE._asdict()).cuda()
         print('Generated model')
         env = gym.make(game)
         
@@ -69,7 +70,7 @@ for game in all_games:
         # for w in trainer.model.parameters():
         #     std_init = 0.01
         #     torch.nn.init.normal_(w, mean=0., std=std_init)
-        trainer.model.init_background_weights(trainer.train_dataloader.dataset.get_all())
+        # trainer.model.init_background_weights(trainer.train_dataloader.dataset.get_all())
         
         trainer.train(config.TRAINING.epochs, train_only=True)
         env.close()

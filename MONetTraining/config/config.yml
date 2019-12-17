@@ -8,7 +8,7 @@ EXPERIMENT:
     log_every: 50
 
 MODULE:
-  latent_dim: 32
+  latent_dim: 8
   background_latent_dim: 1
   latent_prior: 1.0
   patch_shape: 

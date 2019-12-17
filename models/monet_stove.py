@@ -288,7 +288,7 @@ class MONetStove(nn.Module):
         # 2.2 Loop over sequence and do dynamics prediction.
         for t in range(skip, T):
             # core ignores object sizes
-            tmp, reward = self.dyn(cur_z, 0, core_actions[:, t-1])
+            tmp, reward = self.dyn(cur_z, core_actions[:, t-1])
             # assert not torch.any(torch.isnan(tmp))
             # rewards[:, t] = reward.squeeze()
             z_dyn_tmp, z_dyn_std_tmp = tmp[..., :self.full_latent_len], tmp[..., self.full_latent_len:]
@@ -464,7 +464,7 @@ class MONetStove(nn.Module):
 
         for t in range(1, num+1):
             tmp, reward = self.dyn(
-                    z[t-1], 0, core_actions[:, t-1])
+                    z[t-1], core_actions[:, t-1])
             z_tmp, z_dyn_std_tmp = tmp[..., :self.full_latent_len], tmp[..., self.full_latent_len:]
             rewards[t-1] = reward
 

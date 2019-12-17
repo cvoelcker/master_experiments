@@ -51,6 +51,7 @@ MODULE:
         - 0.01
         pos_var: 0.3
         action_space: 6
+        num_dynamics: 3
 
 TRAINING:
     optimizer:

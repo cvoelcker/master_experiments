@@ -24,6 +24,7 @@ class Dynamics(nn.Module):
         enc_input_size = cl
 
         self.num_obj = monet_config.num_slots
+        self.num_dynamics = config.num_dynamics
 
         self.action_conditioned = stove_config.action_conditioned
         self.action_space = config.action_space
@@ -52,16 +53,24 @@ class Dynamics(nn.Module):
         self.state_enc = nn.Linear(enc_input_size, cl)
 
         # Interaction Net Core Modules
+
+        # softmax assignement module
+        self.dyn_inference = nn.Sequential(
+            nn.Linear(cl, cl),
+            nn.ReLU(),
+            nn.Linear(cl, self.num_dynamics)
+        )
+
         # Self-dynamics MLP
         self.self_cores = nn.ModuleList()
-        for i in range(3):
+        for i in range(self.num_dynamics):
             self.self_cores.append(nn.ModuleList())
             self.self_cores[i].append(nn.Linear(cl, cl))
             self.self_cores[i].append(nn.Linear(cl, cl))
 
         # Relation MLP
         self.rel_cores = nn.ModuleList()
-        for i in range(3):
+        for i in range(self.num_dynamics):
             self.rel_cores.append(nn.ModuleList())
             self.rel_cores[i].append(nn.Linear(1 + cl * 2, 2 * cl))
             self.rel_cores[i].append(nn.Linear(2 * cl, cl))
@@ -69,7 +78,7 @@ class Dynamics(nn.Module):
 
         # Attention MLP
         self.att_net = nn.ModuleList()
-        for i in range(3):
+        for i in range(self.num_dynamics):
             self.att_net.append(nn.ModuleList())
             self.att_net[i].append(nn.Linear(1 + cl * 2, 2 * cl))
             self.att_net[i].append(nn.Linear(2 * cl, cl))
@@ -77,7 +86,7 @@ class Dynamics(nn.Module):
 
         # Affector MLP
         self.affector = nn.ModuleList()
-        for i in range(3):
+        for i in range(self.num_dynamics):
             self.affector.append(nn.ModuleList())
             self.affector[i].append(nn.Linear(cl, cl))
             self.affector[i].append(nn.Linear(cl, cl))
@@ -86,7 +95,7 @@ class Dynamics(nn.Module):
         # Core output MLP
         # changed this to predict 2 cl output
         self.out = nn.ModuleList()
-        for i in range(3):
+        for i in range(self.num_dynamics):
             self.out.append(nn.ModuleList())
             self.out[i].append(nn.Linear(cl + cl, cl + cl))
             self.out[i].append(nn.Linear(cl + cl, 2 * cl))
@@ -175,7 +184,7 @@ class Dynamics(nn.Module):
         else:
             return z_c, None
 
-    def forward(self, s, core_idx, actions=None):
+    def forward(self, s, actions=None):
         """Dynamics core. Predict future state given previous.
 
         Args:
@@ -193,6 +202,9 @@ class Dynamics(nn.Module):
 
         """
         # set_trace()
+
+        result = torch.zeros_like(torch.cat([s, s], -1))
+
         if actions is not None:
             action_embedding = self.action_embedding_layer(actions)
             action_embedding = action_embedding.view(
@@ -204,41 +216,45 @@ class Dynamics(nn.Module):
         # add back positions for distance encoding
         s = torch.cat([s[..., :2], self.state_enc(s)[..., 2:]], -1)
 
-        self_sd_h1 = self.nonlinear(self.self_cores[core_idx][0](s))
-        self_dynamic = self.self_cores[core_idx][1](self_sd_h1) + self_sd_h1
+        # infer object dynamics type (n, o, cl) -> (n, o, num_dyn)
+        dyn_types = F.softmax(self.dyn_inference(s), -1)
 
-        object_arg1 = s.unsqueeze(2).repeat(1, 1, self.num_obj, 1)
-        object_arg2 = s.unsqueeze(1).repeat(1, s.shape[1], 1, 1)
-        distances = (object_arg1[..., 0] - object_arg2[..., 0])**2 +\
-                    (object_arg1[..., 1] - object_arg2[..., 1])**2
-        distances = distances.unsqueeze(-1)
+        for core_idx in range(self.num_dynamics):
+            self_sd_h1 = self.nonlinear(self.self_cores[core_idx][0](s))
+            self_dynamic = self.self_cores[core_idx][1](self_sd_h1) + self_sd_h1
 
-        # shape (n, o, o, 2cl+1)
-        combinations = torch.cat((object_arg1, object_arg2, distances), 3)
-        rel_sd_h1 = self.nonlinear(self.rel_cores[core_idx][0](combinations))
-        rel_sd_h2 = self.nonlinear(self.rel_cores[core_idx][1](rel_sd_h1))
-        rel_factors = self.rel_cores[core_idx][2](rel_sd_h2) + rel_sd_h2
+            object_arg1 = s.unsqueeze(2).repeat(1, 1, self.num_obj, 1)
+            object_arg2 = s.unsqueeze(1).repeat(1, s.shape[1], 1, 1)
+            distances = (object_arg1[..., 0] - object_arg2[..., 0])**2 +\
+                        (object_arg1[..., 1] - object_arg2[..., 1])**2
+            distances = distances.unsqueeze(-1)
 
-        attention = self.nonlinear(self.att_net[core_idx][0](combinations))
-        attention = self.nonlinear(self.att_net[core_idx][1](attention))
-        # change this to sigmoid for saving the size
-        attention = torch.sigmoid(self.att_net[core_idx][2](attention))
+            # shape (n, o, o, 2cl+1)
+            combinations = torch.cat((object_arg1, object_arg2, distances), 3)
+            rel_sd_h1 = self.nonlinear(self.rel_cores[core_idx][0](combinations))
+            rel_sd_h2 = self.nonlinear(self.rel_cores[core_idx][1](rel_sd_h1))
+            rel_factors = self.rel_cores[core_idx][2](rel_sd_h2) + rel_sd_h2
 
-        # mask out object interacting with itself (n, o, o, cl)
-        rel_factors = rel_factors * self.diag_mask * attention
+            attention = self.nonlinear(self.att_net[core_idx][0](combinations))
+            attention = self.nonlinear(self.att_net[core_idx][1](attention))
+            # change this to sigmoid for saving the size
+            attention = torch.sigmoid(self.att_net[core_idx][2](attention))
 
-        # relational dynamics per object, (n, o, cl)
-        rel_dynamic = torch.sum(rel_factors, 2)
+            # mask out object interacting with itself (n, o, o, cl)
+            rel_factors = rel_factors * self.diag_mask * attention
 
-        dynamic_pred = self_dynamic + rel_dynamic
+            # relational dynamics per object, (n, o, cl)
+            rel_dynamic = torch.sum(rel_factors, 2)
 
-        aff1 = torch.tanh(self.affector[core_idx][0](dynamic_pred))
-        aff2 = torch.tanh(self.affector[core_idx][1](aff1)) + aff1
-        aff3 = self.affector[core_idx][2](aff2)
+            dynamic_pred = self_dynamic + rel_dynamic
 
-        aff_s = torch.cat([aff3, s], 2)
-        out1 = torch.tanh(self.out[core_idx][0](aff_s))
-        result = self.out[core_idx][1](out1) + out1
+            aff1 = torch.tanh(self.affector[core_idx][0](dynamic_pred))
+            aff2 = torch.tanh(self.affector[core_idx][1](aff1)) + aff1
+            aff3 = self.affector[core_idx][2](aff2)
+
+            aff_s = torch.cat([aff3, s], 2)
+            out1 = torch.tanh(self.out[core_idx][0](aff_s))
+            result += (self.out[core_idx][1](out1) + out1) * dyn_types[..., core_idx:core_idx+1]
         assert not torch.any(torch.isnan(result))
         
         if self.action_conditioned:

@@ -35,7 +35,7 @@ class MONetTrainer(AbstractTrainer):
 
     def compile_epoch_info_dict(self, data_dict, epoch, **kwargs):
         if 'pretrain' in kwargs:
-            self.model.img_model.beta = 1 / (1 + np.sigmoid(epoch))
+            self.model.img_model.beta = 1 / (1 + np.exp(-epoch))
         return {'model_state': self.model.state_dict(),}
                 #'imgs': (data_dict['imgs'] * 255).type_as(torch.ByteTensor())}
 

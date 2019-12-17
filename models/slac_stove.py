@@ -15,7 +15,6 @@ class SLACAgent():
                  update_steps_latent=10, update_steps_rl=10, update_target_steps=5,
                  grad_clip_model=50, grad_clip_rl=20, target_entropies=None, rl_gamma = 0.99, 
                  initial_alpha = 0.01, target_gamma=0.995, debug=False, **kwargs):
-        self.policy = policy
         self.q_1 = q_1
         self.q_2 = q_2
         self.q_1_target = self.copy_q(q_1)
@@ -125,7 +124,6 @@ class SLACAgent():
         # run optimizers (TODO: check if gradients in latents are nott interferring)
         self.optim_step(self.optim_q_1, q1_loss, self.q_1, self.grad_clip_rl, retain=True)
         self.optim_step(self.optim_q_2, q2_loss, self.q_2, self.grad_clip_rl, retain=True)
-        # self.optim_step(self.optim_p, policy_loss, self.policy, self.grad_clip_rl, retain=False)
         # self.optim_step(self.optim_e, entropy_loss, self.alpha, 0, no_clip=True, retain=False)
         self.alpha = self.log_alpha.exp()
 
@@ -143,7 +141,7 @@ class SLACAgent():
     def calc_critic_loss(self, latents, next_latents, actions, rewards, dones):
         with torch.no_grad():
             # calculate one step lookahead of policy
-            _, probs, _ = self.policy.sample(next_latents)
+            _, probs, _ = self.q_1.sample_action(next_latents)
             next_q1 = self.q_1_target(next_latents)
             next_q2 = self.q_2_target(next_latents)
             next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
@@ -163,7 +161,7 @@ class SLACAgent():
         return q1_loss, q2_loss
 
     def calc_policy_loss(self, latents):
-        _, probs, _ = self.policy(latents)
+        _, probs, _ = self.q_1.get_probs(latents)
         with torch.no_grad():
             q1 = self.q_1(latents)
             q2 = self.q_2(latents)
@@ -215,13 +213,141 @@ class SLACAgent():
         return copy_net
 
 
+class SACAgent():
+
+    def __init__(self, policy, q_1, q_2, model, rl_lr=0.0001, latent_lr=0.0001,
+                 update_steps_latent=10, update_steps_rl=10, update_target_steps=5,
+                 grad_clip_model=50, grad_clip_rl=20, target_entropies=None, rl_gamma = 0.99, 
+                 initial_alpha = 0.01, target_gamma=0.995, debug=False, **kwargs):
+        self.q_1 = q_1
+        self.q_2 = q_2
+        self.q_1_target = self.copy_q(q_1)
+        self.q_2_target = self.copy_q(q_2)
+        if target_entropies is None:
+            self.target_entropies = torch.tensor(-0.98 * np.log(1/self.q_1.action_space)).cuda()
+        else:
+            self.target_entropies = torch.tensor(target_entropies).cuda()
+        self.log_alpha = torch.tensor(np.log(initial_alpha), requires_grad=True, device='cuda')
+        self.alpha = self.log_alpha.exp()
+
+        self.optim_q_1 = Adam(q_1.parameters(), rl_lr)
+        self.optim_q_2 = Adam(q_2.parameters(), rl_lr)
+        self.optim_e = Adam([self.log_alpha], rl_lr)
+
+        self.update_steps_rl = update_steps_rl
+        self.update_target_steps = update_target_steps
+
+        self.grad_clip_rl = grad_clip_rl
+
+        self.gamma = rl_gamma
+        self.target_gamma = target_gamma
+
+        self.debug = debug
+
+    def update(self, batch):
+        q1_l = []
+        q2_l = []
+        e_l  = []
+        ent  = []
+        for i in range(self.update_steps_rl):
+            q1, q2, e, er = self.update_rl(batch)
+            q1_l.append(q1)
+            q2_l.append(q2)
+            e_l.append(e)
+            ent.append(er)
+            if i % self.update_target_steps == 0:
+                self.update_target_networks()
+        q1_l = torch.stack(q1_l, 0)
+        q2_l = torch.stack(q2_l, 0)
+        e_l  = torch.stack(e_l, 0)
+        ent  = torch.stack(ent, 0)
+        return {'q1': torch.mean(q1_l),
+                'q2': torch.mean(q2_l),
+                'e': torch.mean(e_l),
+                'ent': torch.mean(ent)}
+    
+    def update_rl(self, batch):
+        """
+        Gathers the latent inference for RL, the q and policy losses and performsthe update step
+        """
+        if self.debug:
+            from IPython.core.debugger import Tracer
+            Tracer()()
+        with torch.no_grad():
+            obs = batch['x'][:, -6:-2]
+            next_obs = batch['x'][:, -5:-1]
+            actions = batch['a_idx'][:, -2:-1] # second to last action leads to last state
+            rewards = batch['r'][:, -2] # potentially sample reward from reward model
+            dones = batch['d'][:, -2]
+        
+        # get the rl losses
+        q1_loss, q2_loss, mean_entropies = self.calc_critic_loss(obs, next_obs, actions, rewards, dones)
+        
+        # run optimizers (TODO: check if gradients in latents are nott interferring)
+        self.optim_step(self.optim_q_1, q1_loss, self.q_1, self.grad_clip_rl, retain=True)
+        self.optim_step(self.optim_q_2, q2_loss, self.q_2, self.grad_clip_rl, retain=True)
+        # self.optim_step(self.optim_e, entropy_loss, self.alpha, 0, no_clip=True, retain=False)
+        self.alpha = self.log_alpha.exp()
+
+        return q1_loss.detach(), q2_loss.detach(), self.alpha.detach(), -mean_entropies
+        # print(self.alpha)
+
+    def optim_step(self, optim, loss, net, clip, no_clip=False, retain=False):
+        optim.zero_grad()
+        loss.backward(retain_graph=retain)
+        if not no_clip:
+            torch.nn.utils.clip_grad_norm_(net.parameters(), clip)
+        optim.step()
+        optim.zero_grad()
+        
+    def calc_critic_loss(self, obs, next_obs, actions, rewards, dones):
+        with torch.no_grad():
+            # calculate one step lookahead of policy
+            _, probs, _ = self.q_1.sample_action(next_obs)
+            next_q1 = self.q_1_target(next_obs)
+            next_q2 = self.q_2_target(next_obs)
+            next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
+            next_q = torch.sum(next_q, -1)
+            target_q = (rewards + (1. - dones) * self.gamma * next_q)
+            mean_entropies = torch.mean(torch.sum(probs * probs.log(), -1))
+
+        curr_q1 = self.q_1(obs)
+        curr_q1 = curr_q1.gather(-1, actions) # get the correct part of the multi action q function
+        curr_q1 = curr_q1.view(-1)
+        curr_q2 = self.q_2(obs)
+        curr_q2 = curr_q2.gather(-1, actions)
+        curr_q2 = curr_q2.view(-1)
+
+        q1_loss = torch.mean((curr_q1 - target_q.detach()).pow(2))
+        q2_loss = torch.mean((curr_q2 - target_q.detach()).pow(2))
+
+        return q1_loss, q2_loss, mean_entropies
+
+    def update_target_networks(self):
+        """
+        Updates the target q function networks with a moving average of params
+        """
+        def softupdate(param1, param2):
+            return (self.target_gamma * param1.data) + ((1 - self.target_gamma) * param2.data)
+        with torch.no_grad():
+            for param_target, param in zip(self.q_1_target.parameters(), self.q_1.parameters()):
+                param_target.data.copy_(softupdate(param_target, param))
+            for param_target, param in zip(self.q_2_target.parameters(), self.q_2.parameters()):
+                param_target.data.copy_(softupdate(param_target, param))
+
+    def copy_q(self, net):
+        copy_net = copy.deepcopy(net)
+        for p in copy_net.parameters():
+            p.requires_grad = False
+        return copy_net
+
+
 def flatten_probs(action_probs, min_prob=0.001):
     action_space = action_probs.shape[-1]
     action_probs = (min_prob / action_space) + (1 - min_prob) * action_probs
     return action_probs
 
 
-    
 class GraphHead(nn.Module):
     """
     Taken from VIN style dynamics core
@@ -351,7 +477,22 @@ class SimpleGraphHead(nn.Module):
         return torch.mean(self_dynamics + rel_dynamic, 1)
 
 
-class GraphQNet(nn.Module):
+class AbstractQNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def get_probs(self, x):
+        action_probs = F.softmax(self(x), -1)
+        action_probs = flatten_probs(action_probs)
+        dist = torch.distributions.Categorical(probs = action_probs)
+        return dist, action_probs, action_probs.log()
+
+    def sample_action(self, s):
+        dist, probs, log_probs = self.get_probs(s)
+        return dist.sample(), probs, log_probs
+
+
+class GraphQNet(AbstractQNet):
     def __init__(self, graph_head, action_space, needs_actions = False):
         super().__init__()
         self.graph_head = graph_head
@@ -374,7 +515,7 @@ class GraphQNet(nn.Module):
         if self.needs_actions:
             graph_embedding = torch.cat((graph_embedding, action), -1)
         return self.q_head(graph_embedding)
-
+    
 
 class GraphPolicyNet(nn.Module):
     def __init__(self, graph_head, action_space):
@@ -434,7 +575,7 @@ class LinearPolicyNet(nn.Module):
         return dist.sample(), probs, log_probs
 
 
-class LinearQNet(nn.Module):
+class LinearQNet(AbstractQNet):
 
     def __init__(self, latent_size, action_space):
         super().__init__()
@@ -451,3 +592,31 @@ class LinearQNet(nn.Module):
 
     def forward(self, x):
         return self.encoder(x)
+
+
+class ImageQNet(AbstractQNet):
+
+    def __init__(self, shape, action_space):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(12, 64, 3, 2, 1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, 2, 1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, 2, 1),
+            nn.ReLU(),
+            nn.Flatten()
+        )
+        c = int(((shape[0] / (2 ** 3)) ** 2) * 64)
+        self.linear = nn.Sequential(
+            nn.Linear(c, 64),
+            nn.Linear(64, 32),
+            nn.Linear(32, action_space),
+        )
+        self.action_space = action_space
+
+    def forward(self, x):
+        shape = x.shape
+        x = x.view(shape[0], shape[1] * shape[2], shape[3], shape[4])
+        enc = self.encoder(x)
+        return self.linear(enc)
