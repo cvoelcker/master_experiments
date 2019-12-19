@@ -228,6 +228,8 @@ class MONetStove(nn.Module):
         return z_matched, z_std_matched, torch.stack(rotations, 1)
 
     def encode_sort_img(self, x, last_z = None):
+        # print(x.max())
+        # print(x.min())
         T = x.shape[1]
         z_img, z_img_std = self.img_model.build_flat_image_representation(
             x.flatten(end_dim=1), return_dists=True)
@@ -463,8 +465,7 @@ class MONetStove(nn.Module):
             core_actions = num * [0.]
 
         for t in range(1, num+1):
-            tmp, reward = self.dyn(
-                    z[t-1], core_actions[:, t-1])
+            tmp, reward = self.dyn(z[t-1], core_actions[:, t-1])
             z_tmp, z_dyn_std_tmp = tmp[..., :self.full_latent_len], tmp[..., self.full_latent_len:]
             rewards[t-1] = reward
 
@@ -517,7 +518,7 @@ class MONetStove(nn.Module):
 
         """
         self.pretrain = pretrain
-
+        
         if pretrain:
             loss, d = self.img_model(x.flatten(end_dim=1))
             return -1. * loss, d, None

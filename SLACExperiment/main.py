@@ -76,45 +76,6 @@ transformers = [
         ]
 
 data = SequenceDictDataSet(source_loader, transformers, 8)
- 
-if config.EXPERIMENT.pretrain_model:
-   
-    trainer = setup_trainer(MONetTrainer, monet, training_config, data)
-    
-    checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
-    trainer.register_handler(checkpointing)
-    
-    regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'), log_name_list=['imgs'])
-    trainer.register_handler(regular_logging)
-    
-    tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean', 'p_x_loss', 'p_x_loss_mean']
-    tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
-    trainer.register_handler(tb_logger)
-    
-    # trainer.model.img_model.init_background_weights(trainer.train_dataloader.dataset.get_all())
-    
-    trainer.train(config.TRAINING.epochs, train_only=True, pretrain=config.EXPERIMENT.pretrain_img)
-    if config.EXPERIMENT.pretrain_img:
-            monet.img_model.beta = config.MODULE.MONET.beta
-            trainer = setup_trainer(MONetTrainer, monet, training_config, data)
-
-            checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
-            trainer.register_handler(checkpointing)
-
-            regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'), log_name_list=['imgs'])
-            trainer.register_handler(regular_logging)
-
-            tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean', 'p_x_loss_mean']
-            tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
-            trainer.register_handler(tb_logger)
-
-            trainer.train(config.TRAINING.epochs * 10, train_only=True, pretrain=False)
-    monet.img_model.beta = config.MODULE.MONET.beta
-
-
-##################################################################################
-# build RL full trainer
-env.reset()
 
 memory = buffer.StateBuffer(500000, config.DATA.shape, 8, config.MODULE.DYNAMICS.action_space)
 for i in range(200):
@@ -123,10 +84,57 @@ for i in range(200):
     data.dataset['reward'][i].reshape(-1), 
     data.dataset['done'][i].reshape(-1))
 
+# if config.EXPERIMENT.pretrain_model:
+#    
+#     trainer = setup_trainer(MONetTrainer, monet, training_config, memory)
+#     
+#     checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
+#     trainer.register_handler(checkpointing)
+#     
+#     regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'), log_name_list=['imgs'])
+#     trainer.register_handler(regular_logging)
+#     
+#     tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean', 'p_x_loss', 'p_x_loss_mean']
+#     tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
+#     trainer.register_handler(tb_logger)
+#     
+#     # trainer.model.img_model.init_background_weights(trainer.train_dataloader.dataset.get_all())
+#     
+#     trainer.train(config.TRAINING.epochs, train_only=True, pretrain=config.EXPERIMENT.pretrain_img)
+#     if config.EXPERIMENT.pretrain_img:
+#             monet.img_model.beta = config.MODULE.MONET.beta
+#             trainer = setup_trainer(MONetTrainer, monet, training_config, memory)
+# 
+#             checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
+#             trainer.register_handler(checkpointing)
+# 
+#             regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'), log_name_list=['imgs'])
+#             trainer.register_handler(regular_logging)
+# 
+#             tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean', 'p_x_loss_mean']
+#             tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
+#             trainer.register_handler(tb_logger)
+# 
+#             trainer.train(config.TRAINING.epochs * 10, train_only=True, pretrain=False)
+#     monet.img_model.beta = config.MODULE.MONET.beta
+
+
+##################################################################################
+# build RL full trainer
+env.reset()
+
 if config.EXPERIMENT.algorithm == 'slac':
     trainer = SLACTrainer(config.RL, slac, env, memory)
 elif config.EXPERIMENT.algorithm == 'sac':
     trainer = SACTrainer(config.RL, slac, env, memory)
+
+if config.EXPERIMENT.pretrain_model:
+    if config.EXPERIMENT.algorithm == 'sac':
+        raise ValueError('Cannot pretrain model-free baseline')
+    trainer.pretrain(config.TRAINING.batch_size, config.TRAINING.epochs, img=config.EXPERIMENT.pretrain_img)
+    if config.EXPERIMENT.pretrain_img:
+        print('Pretraining model')
+        trainer.pretrain(config.TRAINING.batch_size, config.TRAINING.epochs * 5, img=False)
 
 checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
 trainer.register_handler(checkpointing)
