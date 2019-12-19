@@ -37,9 +37,9 @@ run_path = get_run_path(
 data_config = config.DATA
 training_config = config.TRAINING
 
-print('running first half')
+print('running second half')
 l = len(all_games)
-for game in all_games[int(l/2):]:
+for game in all_games[:int(l/2)]:
         print('Running {}'.format(game))
         monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
         print('Generated model')
