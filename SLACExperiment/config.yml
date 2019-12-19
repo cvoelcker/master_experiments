@@ -23,15 +23,15 @@ MODULE:
     SLAC:
         QNET:
         POLICY:
-        rl_lr: 0.0001
-        latent_lr: 0.0001
+        rl_lr: 0.0003
+        latent_lr: 0.0003
         update_steps_latent: 1
         update_steps_rl: 1
         update_target_steps: 1
         grad_clip_model: 20
         grad_clip_rl: 10
-        initial_alpha: 0.5
-        target_gamma: 0.999
+        initial_alpha: 0.1
+        target_gamma: 0.995
         debug: False
         slac_latent_dim: 64
     MONET:

@@ -28,12 +28,12 @@ class StateBuffer(Dataset):
 
     def __getitem__(self, idx: int):
         assert idx < (self.fill - self.seq_len) and (self.fill >= self.seq_len)
-        x = self.torch_transform(self.s_buffer[idx:idx+self.seq_len]).float() / 255.0
+        x = self.torch_transform(self.s_buffer[idx:idx+self.seq_len]).float()
         a = self.torch_transform(self.a_buffer[idx:idx+self.seq_len], action_expand=True)
         a_idx = self.torch_transform(self.a_buffer[idx:idx+self.seq_len]).long()
         r = self.torch_transform(self.r_buffer[idx:idx+self.seq_len]).float()
         d = self.torch_transform(self.d_buffer[idx:idx+self.seq_len]).float()
-        return {'x': x, 'a': a, 'r': r, 'd': d, 'a_idx': a_idx}
+        return {'X': x, 'a': a, 'r': r, 'd': d, 'a_idx': a_idx}
 
     def put(self, obs: np.array, actions: np.array, rewards: np.array, dones: np.array):
         new_len = len(obs)
@@ -60,7 +60,7 @@ class StateBuffer(Dataset):
 
     def torch_transform(self, x, action_expand=False):
         if len(x.shape) >= 4:
-            return torch.Tensor(np.moveaxis(x, -1, -3)).float().cuda()
+            return torch.Tensor(np.moveaxis(x, -1, -3)).float().cuda() / 255.
         elif action_expand:
             # first, convert to torch tensor, add an additional dimension (the one_hot dimension)
             # and convert to long, since torch expects long as indices

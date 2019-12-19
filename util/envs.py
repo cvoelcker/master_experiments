@@ -305,7 +305,6 @@ class PhysicsEnv:
 
             else:
                 img[:, :, i] += factor
-
         img[img > 1] = 1
 
         return (img * 255.).astype(np.uint8)

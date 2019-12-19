@@ -78,12 +78,12 @@ class SLACAgent():
                 'm': torch.mean(m_l),
                 'ent': torch.mean(ent)}
     
-    def update_model(self, batch):
-        obs = batch['x']
+    def update_model(self, batch, pretrain_img=False):
+        obs = batch['X']
         actions = batch['a']
         rewards = batch['r']
         mask = torch.cumsum(batch['d'], -1)
-        loss, _, _ = self.model(obs, actions, rewards, mask)
+        loss, _, _ = self.model(obs, actions, rewards, mask, pretrain=pretrain_img)
         (-1*loss).mean().backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip_model)
         self.optim_model.step()
@@ -97,7 +97,7 @@ class SLACAgent():
             from IPython.core.debugger import Tracer
             Tracer()()
         with torch.no_grad():
-            obs = batch['x']
+            obs = batch['X']
             actions = batch['a']
             all_latents = self.model.infer_latent(obs, actions).cuda()
             # all_latents = self.get_latent(batch, pred=False) # final latent is only inferred? TODO Test both
@@ -274,8 +274,8 @@ class SACAgent():
             from IPython.core.debugger import Tracer
             Tracer()()
         with torch.no_grad():
-            obs = batch['x'][:, -6:-2]
-            next_obs = batch['x'][:, -5:-1]
+            obs = batch['X'][:, -6:-2]
+            next_obs = batch['X'][:, -5:-1]
             actions = batch['a_idx'][:, -2:-1] # second to last action leads to last state
             rewards = batch['r'][:, -2] # potentially sample reward from reward model
             dones = batch['d'][:, -2]

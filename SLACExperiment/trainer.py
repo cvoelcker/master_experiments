@@ -62,7 +62,7 @@ class MONetTrainer(AbstractTrainer):
 
     def train_step(self, data, **kwargs):
         # torch.autograd.set_detect_anomaly(True)
-        loss, data_dict, r = self.model(data['X'], actions=data['action'].cuda().float(), pretrain=kwargs['pretrain'])
+        loss, data_dict, r = self.model(data['X'], actions=data['a'].cuda().float(), pretrain=kwargs['pretrain'])
         self.optimizer.zero_grad()
         torch.mean(-1. * loss).backward()
         if self.clip_gradient:
@@ -97,10 +97,10 @@ class MONetTrainer(AbstractTrainer):
 
 class MONetTester(AbstractTrainer):
 
-    def train_step(self, data):
+    def train_step(self, data): 
         with torch.no_grad():
         # torch.autograd.set_detect_anomaly(True)
-            loss, data_dict, r = self.model(data['X'], actions=data['action'].cuda().float())
+            loss, data_dict, r = self.model(data['X'], actions=data['a'].cuda().float())
             z_full, imgs, r = self.model.rollout(
                     data_dict['z_s'][:, -1].cuda().float(),
                     num = data['action'].shape[1],
@@ -220,6 +220,12 @@ class SLACTrainer(RLTrainer):
                         eval_latents = self.model.model.update_latent(_obs, action, eval_latents.cuda())
                     last_obs = eval_obs
         return np.mean(np.sum(returns, -1)), np.var(np.sum(returns, -1))
+    
+    def pretrain(self, batch_size, epochs, img=False):
+        for epoch in tqdm(range(epochs)):
+            for i in tqdm(range(len(self.memory)//batch_size)):
+                batch = self.compose_batch(batch_size)
+                self.model.update_model(batch, pretrain_img=img)
 
 
 class SACTrainer(RLTrainer):
