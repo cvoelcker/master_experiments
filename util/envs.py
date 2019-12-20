@@ -242,12 +242,10 @@ class PhysicsEnv:
     def step(self, action=1, mass_center_obs=False, actions=False):
         """Full step for the environment."""
         if actions:
-            # Actions are implemented as hardly affecting the first object's v.
+            # Actions are implemented as directly changing the first object's v.
             self.v[0] = action * self.t
 
         for _ in range(self.internal_steps):
-            self.x += self.t * self.eps * self.v
-
             if mass_center_obs:
                 # Do simulation in center of mass system.
                 c_body = np.sum(self.m * self.x, 0) / np.sum(self.m)
@@ -255,6 +253,7 @@ class PhysicsEnv:
 
             self.v -= self.fric_coeff * self.m * self.v * self.t * self.eps
             self.v = self.simulate_physics(actions=actions)
+            self.x += self.t * self.eps * self.v
 
         img = self.draw_image()
         state = np.concatenate([self.x, self.v], axis=1)
