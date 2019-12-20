@@ -274,8 +274,8 @@ class SACAgent():
             from IPython.core.debugger import Tracer
             Tracer()()
         with torch.no_grad():
-            obs = batch['X'][:, -6:-2]
-            next_obs = batch['X'][:, -5:-1]
+            obs = batch['X'][:, -5:-1]
+            next_obs = batch['X'][:, -4:]
             actions = batch['a_idx'][:, -2:-1] # second to last action leads to last state
             rewards = batch['r'][:, -2] # potentially sample reward from reward model
             dones = batch['d'][:, -2]
@@ -490,6 +490,10 @@ class AbstractQNet(nn.Module):
     def sample_action(self, s):
         dist, probs, log_probs = self.get_probs(s)
         return dist.sample(), probs, log_probs
+
+    def sample_max_action(self, s):
+        dist, probs, log_probs = self.get_probs(s)
+        return torch.argmax(probs, -1), probs, log_probs
 
 
 class GraphQNet(AbstractQNet):

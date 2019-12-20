@@ -16,6 +16,7 @@ class StateBuffer(Dataset):
         self.r_buffer = np.zeros((buffer_size,), dtype=np.int8)
         self.d_buffer = np.zeros((buffer_size,), dtype=np.uint8)
         self.fill = 0
+        self.fill_idx = 0
         self.buffer_size = buffer_size
         self.seq_len = seq_len
         self.image_size = image_size
@@ -37,19 +38,17 @@ class StateBuffer(Dataset):
 
     def put(self, obs: np.array, actions: np.array, rewards: np.array, dones: np.array):
         new_len = len(obs)
-        offset = self.buffer_size - new_len - self.fill
+        offset = self.buffer_size - new_len - self.fill_idx
         if offset < 0:
-            self.s_buffer[0:self.fill+offset] = self.s_buffer[-offset:self.fill]
-            self.a_buffer[0:self.fill+offset] = self.a_buffer[-offset:self.fill]
-            self.r_buffer[0:self.fill+offset] = self.r_buffer[-offset:self.fill]
-            self.d_buffer[0:self.fill+offset] = self.d_buffer[-offset:self.fill]
-            self.fill += offset
+            self.fill_idx = 0
+        else:
+            self.fill += new_len
         reshaped_img = np.array([self.resize(o) for o in obs])
-        self.s_buffer[self.fill:self.fill+new_len] = reshaped_img
-        self.a_buffer[self.fill:self.fill+new_len] = actions
-        self.r_buffer[self.fill:self.fill+new_len] = rewards
-        self.d_buffer[self.fill:self.fill+new_len] = dones
-        self.fill += new_len
+        self.s_buffer[self.fill_idx:self.fill_idx+new_len] = reshaped_img
+        self.a_buffer[self.fill_idx:self.fill_idx+new_len] = actions
+        self.r_buffer[self.fill_idx:self.fill_idx+new_len] = rewards
+        self.d_buffer[self.fill_idx:self.fill_idx+new_len] = dones
+        self.fill_idx += new_len
         self.total_samples += new_len
 
     def clean(self):

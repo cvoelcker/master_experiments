@@ -24,7 +24,7 @@ MODULE:
         QNET:
         POLICY:
         rl_lr: 0.0003
-        latent_lr: 0.0003
+        latent_lr: 0.0001
         update_steps_latent: 1
         update_steps_rl: 1
         update_target_steps: 1

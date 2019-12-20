@@ -207,7 +207,7 @@ class SLACTrainer(RLTrainer):
             for i in range(self.eval_epochs):
                 last_obs, eval_latents = self.init_latent(self.eval_env)
                 for j in range(100):
-                    action, _, _ = self.model.q_1.sample_action(eval_latents.cuda())
+                    action, _, _ = self.model.q_1.sample_max_action(eval_latents.cuda())
                     action = action.detach().cpu().numpy()
                     eval_obs, r, d, info = self.env.step(action)
                     returns[i, j] = r
@@ -261,7 +261,7 @@ class SACTrainer(RLTrainer):
             for i in range(self.eval_epochs):
                 last_obs = self.prepend_zero(self.eval_env.reset())
                 for j in range(100):
-                    action, _, _ = self.model.q_1.sample_action(self.full_transform(last_obs))
+                    action, _, _ = self.model.q_1.sample_max_action(self.full_transform(last_obs))
                     action = action.detach().cpu().numpy()
                     eval_obs, r, d, info = self.env.step(action)
                     returns[i, j] = r
