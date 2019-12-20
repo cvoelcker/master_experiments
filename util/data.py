@@ -46,8 +46,14 @@ def generate_envs_data(env, run_len=100, num_runs=100):
     return data
 
 if __name__ == '__main__':
-    env = gym.make('DemonAttack-v0')
-    data = generate_envs_data(env)
-    pickle.dump(data, open('./data/demon_attack_train.pkl', 'wb'), protocol=4)
-    data = generate_envs_data(env)
-    pickle.dump(data, open('./data/demon_attack_test.pkl', 'wb'), protocol=4)
+    # env = gym.make('DemonAttack-v0')
+    # data = generate_envs_data(env)
+    # pickle.dump(data, open('./data/demon_attack_train.pkl', 'wb'), protocol=4)
+    # data = generate_envs_data(env)
+    # pickle.dump(data, open('./data/demon_attack_test.pkl', 'wb'), protocol=4)
+    import imageio
+    import envs
+    
+    data = generate_envs_data(envs.AvoidanceTask(envs.BillardsEnv()), run_len=10000, num_runs=1)
+
+    imageio.mimsave('test.gif', data['X'][0], fps=24)

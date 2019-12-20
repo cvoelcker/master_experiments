@@ -241,11 +241,10 @@ class PhysicsEnv:
 
     def step(self, action=1, mass_center_obs=False, actions=False):
         """Full step for the environment."""
-        if actions:
-            # Actions are implemented as directly changing the first object's v.
-            self.v[0] = action * self.t
-
         for _ in range(self.internal_steps):
+            if actions:
+                # Actions are implemented as directly changing the first object's v.
+                self.v[0] = action * self.t
             if mass_center_obs:
                 # Do simulation in center of mass system.
                 c_body = np.sum(self.m * self.x, 0) / np.sum(self.m)
