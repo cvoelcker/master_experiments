@@ -92,7 +92,7 @@ TRAINING:
   clip_gradient_value: 20
   decay_rate: 0.99
   decay_schedule: 1
-  epochs: 10
+  epochs: 20
   optimizer:
     lr: 0.0003
     optimizer_name: Adam

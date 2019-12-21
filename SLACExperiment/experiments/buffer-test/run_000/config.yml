@@ -61,7 +61,7 @@ MODULE:
     QNET: null
     debug: false
     grad_clip_model: 20
-    grad_clip_rl: 10
+    grad_clip_rl: 50
     initial_alpha: 0.1
     latent_lr: 0.0001
     rl_lr: 0.0003
@@ -101,4 +101,4 @@ TRAINING:
   reshape: false
   rl_batch_size: 64
   summarize: false
-  total_steps: 150000
+  total_steps: 100000
