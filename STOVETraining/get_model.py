@@ -6,7 +6,6 @@ from torch_runner.experiment_setup import get_run_path, find_next_run_number
 from spatial_monet.spatial_monet import MaskedAIR
 from models.monet_stove import MONetStove
 from models.dynamics import Dynamics
-from models.slac_stove import SLACAgent, GraphHead, GraphQNet, GraphPolicyNet
 
 
 def get_model(config, model_class, load_run, run_name, run_number):
@@ -33,18 +32,3 @@ def get_model(config, model_class, load_run, run_name, run_number):
         model_state_dict = torch.load(path)
         stove.load_state_dict(model_state_dict)
     return stove
-
-
-def get_rl_model(config, load_run, run_name, run_number):
-    print('SLAC reload is not implemented yet!')
-
-    # path for joint graph head for policy and qnet (joint actor critic nets for better rep learning)
-    graph_head = GraphHead(config.SLAC.GRAPH)
-    q_net = GraphQNet(graph_head)
-
-    qnet = models
-    pass
-
-
-def get_slac(config, monet, qnet, policy):
-    pass

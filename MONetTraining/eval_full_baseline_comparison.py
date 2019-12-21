@@ -30,10 +30,23 @@ for game in all_games:
         spatial_monet_config =
         genesis_config =
         vae_config =
+
+        monet_checkpoint = 
+        spatial_monet_checkpoint = 
+        genesis_checkpoint = 
+        vae_checkpoint = 
+
         monet = Monet(**monet_config._asdict()).cuda()
+        monet.load_state_dict(torch.load(monet_checkpoint))
+
         spatial_monet = MaskedAIR(**spatial_monet_config._asdict()).cuda
+        spatial_monet.load_state_dict(torch.load(spatial_monet_checkpoint))
+
         genesis = GENESIS(**genesis_config._asdict()).cuda
+        genesis.load_state_dict(torch.load(genesis_checkpoint))
+
         vae = BaselineVAE(**vae_config._asdict()).cuda
+        vae.load_state_dict(torch.load(vae_checkpoint))
 
         all_models = {
             'monet': monet,

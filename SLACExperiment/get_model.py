@@ -6,7 +6,8 @@ from torch_runner.experiment_setup import get_run_path, find_next_run_number
 from spatial_monet.spatial_monet import MaskedAIR
 from models.monet_stove import MONetStove 
 from models.dynamics import Dynamics
-from models.slac_stove import GraphHead, SimpleGraphHead, GraphPolicyNet, GraphQNet, SLACAgent, SACAgent, LinearQNet, LinearPolicyNet, ImageQNet
+from models.slac_stove import SLACAgent, SACAgent
+from models.rl_nets import GraphHead, SimpleGraphHead, GraphPolicyNet, GraphQNet, LinearQNet, LinearPolicyNet, ImageQNet
 from models.slac_model import SLACModel
 from util import buffer
 

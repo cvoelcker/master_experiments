@@ -7,6 +7,7 @@ import gym
 
 from config_parser.config_parser import ConfigGenerator
 from spatial_monet.spatial_monet import MaskedAIR
+from spatial_monet.genesis import GENESIS
 from spatial_monet.monet import Monet
 
 from torch_runner.experiment_setup import setup_experiment, load_config, get_model, get_run_path
@@ -15,7 +16,7 @@ from torch_runner.data.base import BasicDataSet
 from torch_runner.training_setup import setup_trainer
 from torch_runner.handlers import file_handler, tb_handler
 
-from trainer import MONetTrainer
+from trainer import MONetTrainer, GECOTrainer
 from util.data import generate_envs_data
 
 all_games = [
@@ -42,7 +43,7 @@ l = len(all_games)
 for game in all_games[:int(l/2)]:
         print('Running {}'.format(game))
         # monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
-        monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
+        monet = nn.DataParallel(GENESIS(**config.MODULE._asdict())).cuda()
         print('Generated model')
         env = gym.make(game)
         
@@ -57,7 +58,7 @@ for game in all_games[:int(l/2)]:
         print('Loading data')
         data = BasicDataSet(source_loader, data_transformers)
         print('Setting up trainer')
-        trainer = setup_trainer(MONetTrainer, monet, training_config, data)
+        trainer = setup_trainer(GECOTrainer, monet, training_config, data)
         check_path = os.path.join(run_path, 'checkpoints_{}'.format(game))
         if not os.path.exists(check_path):
                 os.mkdir(check_path)
@@ -69,6 +70,8 @@ for game in all_games[:int(l/2)]:
         tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging_{}'.format(game), log_name_list=['loss', 'kl_loss', 'mask_loss', 'p_x_loss'])
         print('Running training')
         trainer.register_handler(tb_logger)
+
+        trainer.ready()
         
         # MONet init block
         # for w in trainer.model.parameters():

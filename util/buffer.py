@@ -42,7 +42,7 @@ class StateBuffer(Dataset):
         if offset < 0:
             self.fill_idx = 0
         else:
-            self.fill += new_len
+            self.fill = max(self.fill, self.fill_idx+new_len)
         reshaped_img = np.array([self.resize(o) for o in obs])
         self.s_buffer[self.fill_idx:self.fill_idx+new_len] = reshaped_img
         self.a_buffer[self.fill_idx:self.fill_idx+new_len] = actions

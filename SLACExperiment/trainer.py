@@ -264,6 +264,8 @@ class SACTrainer(RLTrainer):
                     action, _, _ = self.model.q_1.sample_max_action(self.full_transform(last_obs))
                     action = action.detach().cpu().numpy()
                     eval_obs, r, d, info = self.env.step(action)
+                    last_obs[:3] = last_obs[1:]
+                    last_obs[3] = eval_obs
                     returns[i, j] = r
                     if d:
                         last_obs = self.prepend_zero(self.eval_env.reset())
@@ -279,18 +281,18 @@ class SACTrainer(RLTrainer):
             i = 0
             while i < steps:
                 i += 1
-                obs.append(self.obs[:, 4])
                 eval_obs = self.full_transform(self.obs)
                 action, _, _ = self.model.q_1.sample_action(eval_obs)
                 action = action.detach().cpu().numpy()
-                actions.append(action)
                 new_obs, r, d, _ = self.env.step(action)
-                self.obs[:3] = self.obs[1:]
-                self.obs[3] = new_obs
+                obs.append(self.obs[:, 3])
+                actions.append(action)
                 r_s.append(r)
                 d_s.append(d)
+                self.obs[:3] = self.obs[1:]
+                self.obs[3] = new_obs
                 if d:
-                    self.obs = self.env.reset()
+                    self.obs = self.prepend_zero(self.env.reset())
         obs = np.stack(obs, 0)
         actions = np.stack(actions, 0).squeeze(-1)
         r_s = np.stack(r_s, 0)

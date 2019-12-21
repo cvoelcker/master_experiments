@@ -55,7 +55,7 @@ class SLACModel(nn.Module):
         self.cl = feature_dim
 
     def forward(self, images_seq, actions_seq, rewards_seq,
-                         dones_seq):
+                         dones_seq, pretrain=False):
         features_seq = self.latent.encoder(images_seq)
 
         # Sample from posterior dynamics.

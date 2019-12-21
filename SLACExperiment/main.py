@@ -77,7 +77,7 @@ transformers = [
 
 data = SequenceDictDataSet(source_loader, transformers, 8)
 
-memory = buffer.StateBuffer(500000, config.DATA.shape, 8, config.MODULE.DYNAMICS.action_space)
+memory = buffer.StateBuffer(50000, config.DATA.shape, 8, config.MODULE.DYNAMICS.action_space)
 for i in range(200):
     memory.put(data.dataset['X'][i], 
     np.argmax(data.dataset['action'][i], -1).reshape(-1),
