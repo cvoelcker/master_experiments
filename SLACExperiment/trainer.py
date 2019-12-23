@@ -22,10 +22,14 @@ class RLTrainer(AbstractTrainer):
         pbar = tqdm(total=total_steps)
         i = 0
         steps = 0
+        eval_means = []
+        eval_vars = []
         while steps < total_steps:
             if (steps % self.eval_every == 0) and not debug:
                 eval_mean, eval_var = self.eval()
                 print(f'{eval_mean}, {eval_var}')
+                eval_means.append(eval_mean)
+                eval_vars.append(eval_vars)
             batch = self.compose_batch(batch_size)
             losses = self.update(batch)
             losses['rolling_reward'] = torch.tensor(self.rolling_reward()).float()
@@ -34,6 +38,8 @@ class RLTrainer(AbstractTrainer):
             pbar.update(1)
             # print(f'Seen {self.memory.total_samples} steps')
             steps += 1
+
+        return eval_means, eval_vars
     
     def update(self, batch):
         return self.model.update(batch)
