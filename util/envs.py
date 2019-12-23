@@ -63,7 +63,7 @@ class Task():
         self.env = env
 
         # make controlled ball quasi-static
-        self.env.m[0] = 10000
+        self.env.m[0] = 10
 
         if greyscale:
             self.frame_buffer = np.zeros(
@@ -199,10 +199,15 @@ class PhysicsEnv:
         else:
             self.draw_image = self.draw_balls
 
+        self.steps_done = 0
+
     def init_v(self):
         """Randomly initialise velocities."""
-        v = np.random.normal(size=(self.n, 2))
-        v = v / np.sqrt((v ** 2).sum()) * .5
+        init = np.random.uniform(0., 2 * np.pi, size=self.n)
+        v = np.zeros((self.n, 2))
+        v[:, 0] = np.sin(init) * 0.3
+        v[:, 1] = np.cos(init) * 0.3
+        # v = v / np.sqrt((v ** 2).sum()) * .5
         return v
 
     def init_x(self):
@@ -241,6 +246,10 @@ class PhysicsEnv:
 
     def step(self, action=1, mass_center_obs=False, actions=False):
         """Full step for the environment."""
+        self.steps_done += 1
+        # if self.steps_done % 100 == 0:
+        #     print(np.sqrt(self.v[:, 0] ** 2 + self.v[:, 1] ** 2))
+        #     print(np.sum(np.sqrt(self.v[1:, 0] ** 2 + self.v[1:, 1] ** 2)))
         for _ in range(self.internal_steps):
             if actions:
                 # Actions are implemented as directly changing the first object's v.
@@ -256,7 +265,7 @@ class PhysicsEnv:
 
         img = self.draw_image()
         state = np.concatenate([self.x, self.v], axis=1)
-        done = False
+        done = self.steps_done % 1000 == 0
 
         return img, state, done
 
@@ -328,6 +337,8 @@ class PhysicsEnv:
     def reset(self):
         """Resets the environment to a new configuration."""
         self.v = self.init_v()
+        # print(np.sum(np.sqrt(self.v[1:, 0] ** 2 + self.v[1:, 1] ** 2)))
+        # print()
         self.a = np.zeros_like(self.v)
         self.x = self.init_x()
         return self.draw_image()
@@ -383,6 +394,10 @@ class BillardsEnv(PhysicsEnv):
                         v_j = 0
 
                     new_v_i, new_v_j = self.new_speeds(self.m[i], self.m[j], v_i, v_j)
+                    
+                    if actions and j == 0:
+                        new_v_i = -v_i
+                        new_v_j = 0
 
                     v[i] += w * (new_v_i - v_i)
                     v[j] += w * (new_v_j - v_j)
