@@ -113,5 +113,5 @@ trainer.register_handler(tb_logger)
 
 e_means, e_vars = trainer.train(config.TRAINING.total_steps, config.TRAINING.rl_batch_size, config.MODULE.SLAC.debug)
 
-pickle.dump(e_means, open(os.path.join(run_path, 'means.pkl'), 'wb')
-pickle.dump(e_vars, open(os.path.join(run_path, 'vars.pkl'), 'wb')
+pickle.dump(e_means, open(os.path.join(run_path, 'means.pkl'), 'wb'))
+pickle.dump(e_vars, open(os.path.join(run_path, 'vars.pkl'), 'wb'))
