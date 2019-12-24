@@ -16,7 +16,6 @@ def generate_envs_data(env, run_len=100, num_runs=100):
     # number of sequences
     for run in tqdm(range(num_runs)):
         img = env.reset()
-
         # number of steps per sequence
         for t in range(run_len):
             action = env.action_space.sample()
@@ -54,6 +53,6 @@ if __name__ == '__main__':
     import imageio
     import envs
     
-    data = generate_envs_data(envs.AvoidanceTask(envs.BillardsEnv()), run_len=10000, num_runs=1)
-
-    imageio.mimsave('test.gif', data['X'][0], fps=24)
+    data = generate_envs_data(envs.AvoidanceTask(envs.BillardsEnv()), run_len=100, num_runs=1)
+    for i, seq in enumerate(data['X'][:]):
+        imageio.mimsave(f'test_{i}.gif', seq, fps=24)
