@@ -24,12 +24,14 @@ class RLTrainer(AbstractTrainer):
         steps = 0
         eval_means = []
         eval_vars = []
+        all_obses = []
         while steps < total_steps:
             if (steps % self.eval_every == 0) and not debug:
-                eval_mean, eval_var = self.eval()
+                eval_mean, eval_var, all_obs = self.eval()
                 print(f'{eval_mean}, {eval_var}')
                 eval_means.append(eval_mean)
                 eval_vars.append(eval_vars)
+                all_obses.append(all_obs)
             batch = self.compose_batch(batch_size)
             losses = self.update(batch)
             losses['rolling_reward'] = torch.tensor(self.rolling_reward()).float()
@@ -39,7 +41,7 @@ class RLTrainer(AbstractTrainer):
             # print(f'Seen {self.memory.total_samples} steps')
             steps += 1
 
-        return eval_means, eval_vars
+        return eval_means, eval_vars, all_obses
     
     def update(self, batch):
         return self.model.update(batch)
@@ -209,13 +211,14 @@ class SLACTrainer(RLTrainer):
         }
         self.notify_epoch_handlers(full_model_state)
         returns = np.zeros((self.eval_epochs, 100), dtype=np.int8)
+        all_obs = np.zeros((self.eval_epochs, 100, 32, 32, 3))
         with torch.no_grad():
             for i in range(self.eval_epochs):
                 last_obs, eval_latents = self.init_latent(self.eval_env)
                 for j in range(100):
                     action, _, _ = self.model.q_1.sample_max_action(eval_latents.cuda())
                     action = action.detach().cpu().numpy()
-                    eval_obs, r, d, info = self.env.step(action)
+                    eval_obs, r, d, info = self.eval_env.step(action)
                     returns[i, j] = r
                     if d:
                         eval_obs, eval_latents = self.init_latent(self.eval_env, write=False)
@@ -225,7 +228,8 @@ class SLACTrainer(RLTrainer):
                         action = self.memory.torch_transform(action[np.newaxis, :], action_expand=True)
                         eval_latents = self.model.model.update_latent(_obs, action, eval_latents.cuda())
                     last_obs = eval_obs
-        return np.mean(np.sum(returns, -1)), np.var(np.sum(returns, -1))
+                    all_obs[i, j] = eval_obs
+        return np.mean(np.sum(returns, -1)), np.var(np.sum(returns, -1)), all_obs
     
     def pretrain(self, batch_size, epochs, img=False):
         for epoch in tqdm(range(epochs)):
@@ -245,7 +249,7 @@ class SACTrainer(RLTrainer):
         self.done = False
         self.obs = self.prepend_zero(self.env.reset())
         self.eval_epochs = config.eval_epochs
-        self.eval_every = 5000
+        self.eval_every = 1000
 
         self.exploration_steps = config.exploration_steps
     
@@ -261,21 +265,24 @@ class SACTrainer(RLTrainer):
                 'q2_target': self.model.q_2_target.state_dict(),
             }
         }
+        all_obs = np.zeros((self.eval_epochs, 100, 32, 32, 3))
         self.notify_epoch_handlers(full_model_state)
         returns = np.zeros((self.eval_epochs, 100), dtype=np.int8)
         with torch.no_grad():
             for i in range(self.eval_epochs):
-                last_obs = self.prepend_zero(self.eval_env.reset())
+                obs = self.eval_env.reset()
+                obs = self.prepend_zero(obs)
                 for j in range(100):
-                    action, _, _ = self.model.q_1.sample_max_action(self.full_transform(last_obs))
+                    all_obs[i, j] = obs[3]
+                    action, _, _ = self.model.q_1.sample_max_action(self.full_transform(obs))
                     action = action.detach().cpu().numpy()
-                    eval_obs, r, d, info = self.env.step(action)
-                    last_obs[:3] = last_obs[1:]
-                    last_obs[3] = eval_obs
+                    new_obs, r, d, info = self.eval_env.step(action)
+                    obs[:3] = obs[1:]
+                    obs[3] = new_obs
                     returns[i, j] = r
                     if d:
-                        last_obs = self.prepend_zero(self.eval_env.reset())
-        return np.mean(np.sum(returns, -1)), np.var(np.sum(returns, -1))
+                        obs = self.prepend_zero(self.eval_env.reset())
+        return np.mean(np.sum(returns, -1)), np.var(np.sum(returns, -1)), all_obs
 
     def explore(self, initial = False):
         with torch.no_grad():
