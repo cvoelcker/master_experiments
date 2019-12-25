@@ -31,7 +31,7 @@ class MONetTrainer(AbstractTrainer):
 class GECOTrainer(AbstractTrainer):
 
     def ready(self):
-        self.beta = torch.tensor(.5).cuda()
+        self.beta = torch.tensor(0.5).cuda()
         self.err_ema = 1.
         return True
 
@@ -40,12 +40,12 @@ class GECOTrainer(AbstractTrainer):
         err = -1. * data_dict['p_x'].mean()
         kl_m = data_dict['kl_m_loss'].mean()
         kl_r = data_dict['kl_r_loss'].mean()
-        loss = err + self.beta * (kl_l + kl_r)
+        loss = err + self.beta * (kl_m + kl_r)
         
         err_new = err.detach()
         kl_new = (kl_m + kl_r).detach()
         self.err_ema = self.get_ema(err_new, self.err_ema, 0.99)
-        self.beta = geco_beta_update(
+        self.beta = self.geco_beta_update(
             self.beta, 
             self.err_ema, 
             1., 
@@ -82,6 +82,6 @@ class GECOTrainer(AbstractTrainer):
         beta = beta * torch.exp(step_size * constraint)
         # Clamp beta to be larger than minimum value
         if min_clamp is not None:
-            beta = torch.max(beta, torch.tensor(min_clamp))
+            beta = torch.max(beta, torch.tensor(min_clamp).cuda())
         # Detach again just to be safe
         return beta.detach()

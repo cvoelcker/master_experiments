@@ -40,7 +40,7 @@ training_config = config.TRAINING
 
 print('running second half')
 l = len(all_games)
-for game in all_games[:int(l/2)]:
+for game in all_games[int(l/2):]:
         print('Running {}'.format(game))
         # monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
         monet = nn.DataParallel(GENESIS(**config.MODULE._asdict())).cuda()
