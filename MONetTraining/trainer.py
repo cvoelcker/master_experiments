@@ -24,7 +24,7 @@ class MONetTrainer(AbstractTrainer):
         return True
 
     def compile_epoch_info_dict(self, data_dict, epoch):
-        self.model.beta = 1 / (1 + np.exp(-(epoch - 10)))
+        self.model.module.beta = 1 / (1 + np.exp(-(epoch - 10)))
         return {'model_state': self.model.state_dict()}
 
 

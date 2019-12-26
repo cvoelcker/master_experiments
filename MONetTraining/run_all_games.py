@@ -39,10 +39,10 @@ training_config = config.TRAINING
 
 print('running second half')
 l = len(all_games)
-for game in all_games[:int(l/2)]:
+for game in all_games:
         print('Running {}'.format(game))
         # monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
-        monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
+        monet = nn.DataParallel(MaskedAIR(**config.MODULE._asdict())).cuda()
         print('Generated model')
         env = gym.make(game)
         
@@ -68,13 +68,8 @@ for game in all_games[:int(l/2)]:
                 os.mkdir(log_path)
         tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging_{}'.format(game), log_name_list=['loss', 'kl_loss', 'mask_loss', 'p_x_loss'])
         print('Running training')
+        trainer.model.module.init_background_weights(trainer.train_dataloader.dataset.get_all())
         trainer.register_handler(tb_logger)
-        
-        # MONet init block
-        # for w in trainer.model.parameters():
-        #     std_init = 0.01
-        #     torch.nn.init.normal_(w, mean=0., std=std_init)
-        # trainer.model.init_background_weights(trainer.train_dataloader.dataset.get_all())
         
         trainer.train(config.TRAINING.epochs, train_only=True)
         env.close()

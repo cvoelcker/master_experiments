@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-import spatial_monet.util.network_utils as net_util
+import spatial_monet.util.network_util as net_util
 
 class EncoderNet(nn.Module):
     """
@@ -48,7 +48,7 @@ class EncoderNet(nn.Module):
         x = x.view(-1, self.conv_size)
         x = self.mlp(x)
         mean = self.mean_mlp(x[:, :self.latent_dim])
-        sigma = 2 * F.sigmoid(self.sigma_mlp(x[:, self.latent_dim:]), -1) + 1e-5
+        sigma = 2 * F.sigmoid(self.sigma_mlp(x[:, self.latent_dim:])) + 1e-5
         return mean, sigma
 
 
@@ -92,7 +92,7 @@ class DecoderNet(nn.Module):
         return result
 
 
-class BroadcastVAE(nn.MOdule):
+class BroadcastVAE(nn.Module):
 
     def __init__(
             self, bg_sigma=0.01, latent_prior=1.,
@@ -112,7 +112,7 @@ class BroadcastVAE(nn.MOdule):
         self.img_encoder = EncoderNet(
                 image_shape=self.image_shape, 
                 latent_dim=self.latent_dim,
-                input_size=4)
+                input_size=3)
         self.img_decoder = DecoderNet(
                 image_shape=self.image_shape,
                 latent_dim=self.latent_dim)
@@ -125,9 +125,10 @@ class BroadcastVAE(nn.MOdule):
         recon_loss = net_util.reconstruction_likelihood(x, recon, torch.ones_like(x[:, 0:1, :, :]), self.sigma)
 
         data_dict = {
-            'p_x' = recon,
-            'kl_r' = kl,
-            'kl_m' = torch.zeros_like(kl)
+            'p_x' : recon,
+            'kl_r_loss' : kl,
+            'kl_m_loss' : torch.zeros_like(kl),
+            'reconstruction': recon.detach(),
         }
 
         return -torch.sum(recon_loss, (1,2,3)) + torch.sum(kl, 1), data_dict

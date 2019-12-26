@@ -42,7 +42,7 @@ training_config = config.TRAINING
 
 print('running second half')
 l = len(all_games)
-for game in all_games[:int(l/2)]:
+for game in all_games:
         print('Running {}'.format(game))
         # monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
         monet = nn.DataParallel(BroadcastVAE(**config.MODULE._asdict())).cuda()
@@ -60,7 +60,7 @@ for game in all_games[:int(l/2)]:
         print('Loading data')
         data = BasicDataSet(source_loader, data_transformers)
         print('Setting up trainer')
-        trainer = setup_trainer(GECOTrainer, monet, training_config, data)
+        trainer = setup_trainer(MONetTrainer, monet, training_config, data)
         check_path = os.path.join(run_path, 'checkpoints_{}'.format(game))
         if not os.path.exists(check_path):
                 os.mkdir(check_path)
@@ -73,7 +73,7 @@ for game in all_games[:int(l/2)]:
         print('Running training')
         trainer.register_handler(tb_logger)
 
-        trainer.ready()
+        # trainer.ready()
         
         # MONet init block
         # for w in trainer.model.parameters():
