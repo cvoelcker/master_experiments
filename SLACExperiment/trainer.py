@@ -31,7 +31,7 @@ class RLTrainer(AbstractTrainer):
                 print(f'{eval_mean}, {eval_var}')
                 eval_means.append(eval_mean)
                 eval_vars.append(eval_vars)
-                all_obses.append(all_obs)
+                # all_obses.append(all_obs)
             batch = self.compose_batch(batch_size)
             losses = self.update(batch)
             losses['rolling_reward'] = torch.tensor(self.rolling_reward()).float()
@@ -140,7 +140,7 @@ class SLACTrainer(RLTrainer):
         self.done = False
         self.obs, self.latents = self.init_latent(self.env)
         self.eval_epochs = config.eval_epochs
-        self.eval_every = 5000
+        self.eval_every = 2500
 
         self.exploration_steps = config.exploration_steps
     
