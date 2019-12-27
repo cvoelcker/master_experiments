@@ -44,10 +44,6 @@ trainer.register_handler(checkpointing)
 tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=['loss', 'kl_loss', 'mask_loss', 'p_x_loss'])
 trainer.register_handler(tb_logger)
 
-# MONet init block
-# for w in trainer.model.parameters():
-#     std_init = 0.01
-#     torch.nn.init.normal_(w, mean=0., std=std_init)
 trainer.model.init_background_weights(trainer.train_dataloader.dataset.get_all())
 
 trainer.train(config.TRAINING.epochs, train_only=True)

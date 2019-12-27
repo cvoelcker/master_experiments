@@ -9,6 +9,7 @@ EXPERIMENT:
     log_every: 50
     seed: 0
     random_seed: False
+    game: 'billards'
 
 MODULE:
     MONET:
@@ -16,11 +17,11 @@ MODULE:
         background_latent_dim: 1
         latent_prior: 1.0
         patch_shape:
-        - 16
-        - 16
+        - 8
+        - 8
         image_shape:
-        - 64
-        - 64
+        - 32
+        - 32
         bg_sigma: 0.01
         fg_sigma: 0.05
         num_blocks: 2
@@ -33,7 +34,7 @@ MODULE:
     STOVE:
         action_conditioned: True
         supairvised: False
-        cl: 32
+        cl: 64
         debug_test_mode: False
         skip: 2
         debug_fix_supair: False
@@ -51,12 +52,12 @@ MODULE:
         - 0.01
         pos_var: 0.3
         action_space: 9
-
+        num_dynamics: 1
 TRAINING:
     optimizer:
         optimizer_name: Adam
         lr: 0.0001
-    batch_size: 32
+    batch_size: 64
     epochs: 10
     reshape: False
     summarize: False
@@ -64,7 +65,7 @@ TRAINING:
     decay_rate: 0.99
     decay_schedule: 1
     clip_gradient: True
-    clip_gradient_value: 50
+    clip_gradient_value: 20
     pretrain: True
 
 DATA:
@@ -72,8 +73,8 @@ DATA:
     data_dir: data/avoidance_train.pkl
     type: directory
     shape:
-        - 64
-        - 64
+        - 32
+        - 32
         - 3
     transform:
         - reshape

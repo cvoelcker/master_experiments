@@ -1,6 +1,7 @@
 EXPERIMENT:
     experiment: atari
-    run_name: billards
+    run_name: demonattack
+    game: DemonAttack-v0
     experiment_dir: experiments
     overwrite: False
     load_run: False
@@ -12,15 +13,15 @@ EXPERIMENT:
 
 MODULE:
     MONET:
-        latent_dim: 32
+        latent_dim: 8
         background_latent_dim: 1
         latent_prior: 1.0
         patch_shape:
         - 16
         - 16
         image_shape:
-        - 128
-        - 128
+        - 64
+        - 64
         bg_sigma: 0.01
         fg_sigma: 0.05
         num_blocks: 2
@@ -51,14 +52,14 @@ MODULE:
         - 0.01
         pos_var: 0.3
         action_space: 6
-        num_dynamics: 3
+        num_dynamics: 2
 
 TRAINING:
     optimizer:
         optimizer_name: Adam
         lr: 0.0001
-    batch_size: 8
-    epochs: 200
+    batch_size: 16
+    epochs: 20
     reshape: False
     summarize: False
     parallel: True
@@ -73,8 +74,8 @@ DATA:
     data_dir: data/avoidance_train.pkl
     type: directory
     shape:
-        - 128
-        - 128
+        - 64
+        - 64
         - 3
     transform:
         - reshape

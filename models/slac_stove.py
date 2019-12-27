@@ -283,7 +283,7 @@ class SACAgent():
         # get the rl losses
         q1_loss, q2_loss, mean_entropies = self.calc_critic_loss(obs, next_obs, actions, rewards, dones)
         
-        # run optimizers (TODO: check if gradients in latents are nott interferring)
+        # run optimizers (TODO: check if gradients in latents are not interferring)
         self.optim_step(self.optim_q_1, q1_loss, self.q_1, self.grad_clip_rl, retain=True)
         self.optim_step(self.optim_q_2, q2_loss, self.q_2, self.grad_clip_rl, retain=True)
         # self.optim_step(self.optim_e, entropy_loss, self.alpha, 0, no_clip=True, retain=False)

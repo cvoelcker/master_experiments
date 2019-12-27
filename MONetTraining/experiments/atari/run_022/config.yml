@@ -1,0 +1,47 @@
+DATA:
+  data_dir: test_atari
+  data_name: billards
+  shape:
+  - 128
+  - 128
+  - 3
+  transform:
+  - reshape
+  - torch
+  type: directory
+EXPERIMENT:
+  device: cuda
+  experiment_dir: experiments
+  load_run: false
+  log_every: 50
+  overwrite: false
+  run_name: atari
+  run_number: 0
+MODULE:
+  background_latent_dim: 1
+  beta: 1.0
+  bg_sigma: 0.01
+  channel_base: 8
+  constrain_theta: false
+  fg_sigma: 0.05
+  image_shape:
+  - 128
+  - 128
+  latent_dim: 8
+  latent_prior: 1.0
+  num_blocks: 2
+  num_slots: 6
+  patch_shape:
+  - 16
+  - 16
+TRAINING:
+  batch_size: 64
+  clip_gradient: true
+  clip_gradient_value: 20
+  epochs: 50
+  optimizer:
+    lr: 0.0001
+    optimizer_name: Adam
+  parallel: true
+  reshape: false
+  summarize: false

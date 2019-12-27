@@ -20,9 +20,21 @@ from trainer import MONetTrainer, GECOTrainer
 from util.data import generate_envs_data
 
 all_games = [
-        'adventure', 'air_raid', 'alien', 'amidar', 'assault', 'asterix', 'asteroids', 'atlantis', 'bank_heist', 'battle_zone', 'beam_rider', 'berzerk', 'bowling', 'boxing', 'breakout', 'carnival', 'centipede', 'chopper_command', 'crazy_climber', 
+        'adventure', 'air_raid', 'alien', 'amidar', 'assault',
+        'asterix', 'asteroids', 'atlantis', 'bank_heist', 'battle_zone',
+        'beam_rider', 'berzerk', 'bowling', 'boxing', 'breakout',
+        'carnival', 'centipede', 'chopper_command', 'crazy_climber', 'demon_attack',
+        'double_dunk', 'elevator_action', 'enduro', 'fishing_derby', 'freeway',
+        'frostbite', 'gopher', 'gravitar', 'hero', 'ice_hockey',
+
+        'jamesbond', 'journey_escape', 'kangaroo', 'krull', 'kung_fu_master',
+        'montezuma_revenge', 'ms_pacman', 'name_this_game', 'phoenix', 'pitfall',
+        'pong', 'pooyan', 'private_eye', 'qbert', 'riverraid',
+        'road_runner', 'robotank', 'seaquest', 'skiing', 'solaris',
+        'space_invaders', 'star_gunner', 'tennis', 'time_pilot', 'tutankham',
+        'up_n_down', 'venture', 'video_pinball', 'wizard_of_wor', 'yars_revenge',
+        'zaxxon']
         # 'defender',  ## apparently, this is really broken
-        'demon_attack', 'double_dunk', 'elevator_action', 'enduro', 'fishing_derby', 'freeway', 'frostbite', 'gopher', 'gravitar', 'hero', 'ice_hockey', 'jamesbond', 'journey_escape', 'kangaroo', 'krull', 'kung_fu_master', 'montezuma_revenge', 'ms_pacman', 'name_this_game', 'phoenix', 'pitfall', 'pong', 'pooyan', 'private_eye', 'qbert', 'riverraid', 'road_runner', 'robotank', 'seaquest', 'skiing', 'solaris', 'space_invaders', 'star_gunner', 'tennis', 'time_pilot', 'tutankham', 'up_n_down', 'venture', 'video_pinball', 'wizard_of_wor', 'yars_revenge', 'zaxxon']
 
 all_games = [''.join((s.capitalize() for s in g.split('_'))) + '-v0' for g in all_games]
 

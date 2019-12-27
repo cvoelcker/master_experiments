@@ -340,7 +340,7 @@ class MONetStove(nn.Module):
         if mask is None:
             mask = torch.ones_like(x[:, :, 0, 0, 0]).squeeze(-1)
         else:
-            mask = 1. - mask
+            mask = 1. - torch.cumsum(mask, -1).squeeze(-1)
         batch = x.shape[0]
         T = x.shape[1]
         skip = self.skip
@@ -357,7 +357,8 @@ class MONetStove(nn.Module):
         # At t=1 we have no dyn, however can get full state from supair via
         # supair from t=0. This is used as init for dyn.
 
-        z, log_z, z_dyn, z_dyn_std, z_mean, z_std, rewards = self.infer_dynamics(x, actions, z_img, z_img_std, last_z, skip)
+        z, log_z, z_dyn, z_dyn_std, z_mean, z_std, rewards = self.infer_dynamics(
+            x, actions, z_img, z_img_std, last_z, skip)
         z_s = z[:, skip:]
         z_dyn_s = z_dyn[:, skip:]
         log_z_s = log_z[:, skip:]
@@ -403,7 +404,7 @@ class MONetStove(nn.Module):
 
         # 3.4 Finally assemble ELBO.
         elbo = trans_lik_masked + img_lik_forward_masked - log_z_f_masked
-        augmented_elbo = (T-skip)/T * torch.mean(elbo) + \
+        augmented_elbo = torch.mean(elbo) + \
                        self.pure_img_weight * torch.mean(img_lik_model_masked) + \
                        self.dyn_recon_weight * torch.mean(img_lik_forward_dyn_masked) + \
                        self.img_model.gamma * torch.mean(mask_init_recon_loss) + \
@@ -422,6 +423,7 @@ class MONetStove(nn.Module):
 
         if self.action_conditioned:
             return augmented_elbo, prop_dict, rewards[:, skip:]
+            # return elbo, prop_dict, rewards[:, skip:]
         else:
             return augmented_elbo, prop_dict
 

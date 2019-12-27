@@ -7,7 +7,7 @@ class MONetTrainer(AbstractTrainer):
 
     def train_step(self, data, **kwargs):
         # torch.autograd.set_detect_anomaly(True)
-        loss, data_dict, r = self.model(data['X'], actions=data['action'].cuda().float(), pretrain=kwargs['pretrain'])
+        loss, data_dict, r = self.model(data['X'], actions=data['action'].cuda().float(), mask=data['done'].cuda().float(), pretrain=kwargs['pretrain'])
         self.optimizer.zero_grad()
         torch.mean(-1. * loss).backward()
         if self.clip_gradient:
@@ -53,6 +53,32 @@ class MONetTester(AbstractTrainer):
                     actions=data['action'].cuda().float(),
                     return_imgs=True)
             return {'z': z_full, 'r': r, 'imgs': (imgs * 255).type_as(torch.ByteTensor())}
+
+    def check_ready(self):
+        if self.train_dataloader is None:
+            return False
+        if self.optimizer is None:
+            return False
+        if self.model is None:
+            return False
+        return True
+
+    def compile_epoch_info_dict(self, data_dict, e, **kwargs):
+        return {'model_state': self.model.state_dict()}
+
+
+class MONetInferenceTester(AbstractTrainer):
+
+    def train_step(self, data):
+        with torch.no_grad():
+        # torch.autograd.set_detect_anomaly(True)
+            print(data['X'].shape)
+            loss, data_dict, r = self.model(data['X'], actions=data['action'].cuda().float())
+            return {
+                'z': z_full, 
+                'r': r, 
+                'imgs': (data['X'] * 255).type_as(torch.ByteTensor()),
+                'imgs_inferred': (data_dict['imgs'] * 255).type_as(torch.ByteTensor())}
 
     def check_ready(self):
         if self.train_dataloader is None:

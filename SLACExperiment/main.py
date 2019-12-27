@@ -69,7 +69,7 @@ else:
 
 source_loader = generators.FunctionLoader(
         generate_envs_data,
-        {'env': env, 'num_runs': 200, 'run_len': 100})
+        {'env': env, 'num_runs': 80, 'run_len': 500})
 
 transformers = [
         transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
@@ -79,7 +79,7 @@ transformers = [
 data = SequenceDictDataSet(source_loader, transformers, 8)
 
 memory = buffer.StateBuffer(500000, config.DATA.shape, 8, config.MODULE.DYNAMICS.action_space)
-for i in range(200):
+for i in range(80):
     memory.put(data.dataset['X'][i], 
     np.argmax(data.dataset['action'][i], -1).reshape(-1),
     data.dataset['reward'][i].reshape(-1), 
@@ -99,7 +99,8 @@ if config.EXPERIMENT.pretrain_model:
     trainer.pretrain(config.TRAINING.batch_size, config.TRAINING.epochs, img=config.EXPERIMENT.pretrain_img)
     if config.EXPERIMENT.pretrain_img:
         print('Pretraining model')
-        trainer.pretrain(config.TRAINING.batch_size, config.TRAINING.epochs * 5, img=False)
+        trainer.pretrain(config.TRAINING.batch_size, config.TRAINING.epochs * 20, img=False)
+    torch.save(trainer.model.model.state_dict(), os.path.join(run_path, 'pretrained_model.torch'))
 
 checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
 trainer.register_handler(checkpointing)
