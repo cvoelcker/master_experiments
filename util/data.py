@@ -40,8 +40,6 @@ def generate_envs_data(env, run_len=100, num_runs=100):
     data['done'] = all_dones
     data['action_space'] = action_space
     data['coord_lim'] = all_imgs.shape[3]
-    print(all_imgs.max())
-    print(all_imgs.min())
     return data
 
 if __name__ == '__main__':

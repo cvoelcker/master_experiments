@@ -1,5 +1,6 @@
 EXPERIMENT:
     run_name: atari
+    game: DemonAttack-v0
     experiment_dir: experiments
     overwrite: False
     load_run: False
@@ -8,8 +9,7 @@ EXPERIMENT:
     log_every: 50
 
 MODULE:
-  latent_dim: 8
-  latent_dim: 1
+  latent_dim: 32
   latent_prior: 1.0
   patch_shape: 
   - 16
@@ -23,7 +23,9 @@ MODULE:
   channel_base: 8
   num_slots: 6
   beta: 1.0
+  gamma: 0.1
   constrain_theta: False
+  predict_masks: false
 
 TRAINING:
     optimizer:
