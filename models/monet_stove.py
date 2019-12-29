@@ -343,7 +343,9 @@ class MONetStove(nn.Module):
             mask = 1. - torch.cumsum(mask, -1).squeeze(-1)
         batch = x.shape[0]
         T = x.shape[1]
+        image_shape = x.shape[2:]
         skip = self.skip
+        num_obj = self.img_model.num_slots
 
         # 1. Obtain SuPAIR states.
         # 1.1 Obtain partial states (sizes and positions).
@@ -373,19 +375,19 @@ class MONetStove(nn.Module):
         # if permute_back:
         #     raise NotImplementedError()
         
-        imgs_forward, img_lik_forward, mask_recon_loss = self.img_model.reconstruct_from_latent(
+        imgs_forward, img_lik_forward, mask_recon_loss, masks = self.img_model.reconstruct_from_latent(
             z_s.flatten(end_dim=1),
             imgs=x[:, skip:].flatten(end_dim=1),
             reconstruct_mask=True)
 
         # get reconstructions only from dynamics
-        _, img_lik_forward_dyn, mask_recon_loss = self.img_model.reconstruct_from_latent(
+        _, img_lik_forward_dyn, mask_recon_loss, masks_dyn = self.img_model.reconstruct_from_latent(
             z_dyn_s.flatten(end_dim=1),
             imgs=x[:, skip:].flatten(end_dim=1),
             reconstruct_mask=True)
 
         # also get lik of initial supair
-        imgs_model, img_lik_model, mask_init_recon_loss = self.img_model.reconstruct_from_latent(
+        imgs_model, img_lik_model, mask_init_recon_loss, masks_init = self.img_model.reconstruct_from_latent(
             z_img[:, :skip].flatten(end_dim=1),
             imgs=x[:, :skip].flatten(end_dim=1),
             reconstruct_mask=True)
@@ -410,6 +412,9 @@ class MONetStove(nn.Module):
                        self.img_model.gamma * torch.mean(mask_init_recon_loss) + \
                        self.img_model.gamma * mask_recon_loss_masked
         
+        # construct output dict
+        # reconstructions = imgs_forward.view(batch, T-skip, *image_shape)
+        # masks = masks.view(batch, T-skip, num_obj, *image_shape[1:])
         prop_dict = {
                 'average_elbo': augmented_elbo.detach().cpu(),
                 'trans_lik': trans_lik.detach().cpu(),
@@ -418,7 +423,8 @@ class MONetStove(nn.Module):
                 'elbo': elbo.detach().cpu(),
                 'z_s': z_s.cpu().detach(),
                 'img_lik_mean': torch.mean(torch.cat((img_lik_forward_masked, img_lik_model_masked), 1)).detach().cpu(),
-                'imgs': img_lik_model.cpu().detach(),
+                'reconstruction': imgs_forward.cpu().detach(),
+                'masks': masks.detach().cpu()
                 }
 
         if self.action_conditioned:

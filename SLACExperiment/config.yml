@@ -53,6 +53,7 @@ MODULE:
         gamma: 0.1
         constrain_theta: False
         predict_masks: False
+        max_obj_size: 1.
     STOVE:
         action_conditioned: True
         supairvised: False

@@ -1,0 +1,79 @@
+DATA:
+  data_dir: data/avoidance_train.pkl
+  data_name: billards
+  shape:
+  - 32
+  - 32
+  - 3
+  transform:
+  - reshape
+  - torch
+  type: directory
+EXPERIMENT:
+  device: cuda
+  experiment: billards
+  experiment_dir: experiments
+  game: billards
+  load_run: false
+  log_every: 50
+  overwrite: false
+  random_seed: false
+  run_name: visdom-test
+  run_number: 0
+  seed: 0
+MODULE:
+  DYNAMICS:
+    action_space: 9
+    debug_latent_q_std: 0.04
+    debug_nonlinear: relu
+    debug_xavier: false
+    num_dynamics: 1
+    pos_var: 0.3
+    transition_lik_std:
+    - 0.01
+    - 0.01
+    - 0.01
+    - 0.01
+  MONET:
+    background_latent_dim: 1
+    beta: 1.0
+    bg_sigma: 0.01
+    channel_base: 8
+    constrain_theta: true
+    fg_sigma: 0.05
+    gamma: 0.1
+    image_shape:
+    - 32
+    - 32
+    latent_dim: 4
+    latent_prior: 1.0
+    num_blocks: 2
+    num_slots: 3
+    patch_shape:
+    - 8
+    - 8
+    predict_masks: true
+  STOVE:
+    action_conditioned: true
+    cl: 64
+    debug_fix_supair: false
+    debug_match_appearance: false
+    debug_no_latents: false
+    debug_test_mode: false
+    dyn_recon_weight: 0.0
+    skip: 2
+    supairvised: false
+TRAINING:
+  batch_size: 64
+  clip_gradient: true
+  clip_gradient_value: 20
+  decay_rate: 0.99
+  decay_schedule: 1
+  epochs: 5
+  optimizer:
+    lr: 0.0001
+    optimizer_name: Adam
+  parallel: true
+  pretrain: true
+  reshape: false
+  summarize: false

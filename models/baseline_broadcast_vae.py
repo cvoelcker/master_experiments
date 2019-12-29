@@ -74,6 +74,7 @@ class DecoderNet(nn.Module):
             nn.Conv2d(64, 64, 3, padding=(1, 1)),
             nn.ReLU(inplace=False),
             nn.Conv2d(64, 3, 1),
+            nn.Sigmoid()
         )
 
         # coordinate patching trick
@@ -95,7 +96,7 @@ class DecoderNet(nn.Module):
 class BroadcastVAE(nn.Module):
 
     def __init__(
-            self, bg_sigma=0.01, latent_prior=1.,
+            self, bg_sigma=0.1, latent_prior=1.,
             latent_dim=256, image_shape=(256, 256), 
             debug=False, **kwargs):
         super().__init__()

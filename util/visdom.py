@@ -28,7 +28,7 @@ class VisdomLogger():
         self.vis.images(np.concatenate((imgs, seg_maps, recons), 0), nrow=imgs.shape[0])
          
     
-    def log_visdom(self, images, masks, recons):
-        self.visualize_masks(self.numpify(images[:8]),
-                             self.numpify(masks[:8]),
-                             self.numpify(recons[:8]))
+    def log_visdom(self, images, masks, recons, num_imgs=8):
+        self.visualize_masks(self.numpify(images[:num_imgs]),
+                             self.numpify(masks[:num_imgs]),
+                             self.numpify(recons[:num_imgs]))

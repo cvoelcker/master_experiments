@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 from torch_runner.train.base import AbstractTrainer
+from util.visdom import VisdomLogger
 
 class MONetTrainer(AbstractTrainer):
 
@@ -19,6 +20,10 @@ class MONetTrainer(AbstractTrainer):
                     from IPython.core.debugger import Tracer
                     Tracer()()
         self.optimizer.step()
+        if self.num_steps % 150 == 0 and kwargs['visdom']:
+            self.visdom_logger.log_visdom(data['X'].flatten(end_dim=1), data_dict['masks'], data_dict['reconstruction'], 6)
+        self.num_steps += 1
+        
         return data_dict
 
     def check_ready(self):
@@ -28,6 +33,8 @@ class MONetTrainer(AbstractTrainer):
             return False
         if self.model is None:
             return False
+        self.visdom_logger = VisdomLogger(8456, 'main_stove')
+        self.num_steps = 0
         return True
 
     def append_epoch_info_dict(self, epoch_info_dict, data_dict):

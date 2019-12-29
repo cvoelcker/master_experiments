@@ -29,8 +29,9 @@ MODULE:
         num_slots: 8
         beta: 1.0
         gamma: 0.1
-        constrain_theta: False
+        constrain_theta: True
         predict_masks: False
+        max_obj_size: 0.3
     STOVE:
         action_conditioned: True
         supairvised: False
@@ -59,7 +60,8 @@ TRAINING:
         optimizer_name: Adam
         lr: 0.0001
     batch_size: 16
-    epochs: 20
+    epochs: 2
+    epochs_stove: 200
     reshape: False
     summarize: False
     parallel: True
@@ -71,6 +73,7 @@ TRAINING:
 
 DATA:
     data_name: billards
+    num_samples: 100000
     data_dir: data/avoidance_train.pkl
     type: directory
     shape:

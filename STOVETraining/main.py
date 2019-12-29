@@ -58,7 +58,7 @@ else:
 
 source_loader = generators.FunctionLoader(
         generate_envs_data,
-        {'env': env, 'num_runs': 200, 'run_len': 500})
+        {'env': env, 'num_runs': config.DATA.num_samples//500, 'run_len': 500})
 
 transformers = [
         transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
@@ -82,20 +82,21 @@ trainer.register_handler(tb_logger)
 
 trainer.model.img_model.init_background_weights(trainer.train_dataloader.dataset.get_all())
 
-trainer.train(config.TRAINING.epochs, train_only=True, pretrain=config.TRAINING.pretrain)
+trainer.check_ready()
+trainer.train(config.TRAINING.epochs, train_only=True, pretrain=config.TRAINING.pretrain, visdom=True)
 
 if config.TRAINING.pretrain:
-        monet.img_model.beta = config.MODULE.MONET.beta
-        trainer = setup_trainer(MONetTrainer, monet, training_config, data)
-        
-        checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
-        trainer.register_handler(checkpointing)
-        
-        regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'), log_name_list=['imgs'])
-        trainer.register_handler(regular_logging)
-        
-        tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean', 'p_x_loss_mean']
-        tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
-        trainer.register_handler(tb_logger)
-
-        trainer.train(config.TRAINING.epochs * 20, train_only=True, pretrain=False)
+    monet.img_model.beta = config.MODULE.MONET.beta
+    trainer = setup_trainer(MONetTrainer, monet, training_config, data)
+    
+    checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
+    trainer.register_handler(checkpointing)
+    
+    regular_logging = file_handler.EpochFileHandler(os.path.join(run_path, 'data'), log_name_list=['imgs'])
+    trainer.register_handler(regular_logging)
+    
+    tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'elbo', 'z_s', 'img_lik_mean', 'p_x_loss_mean']
+    tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
+    trainer.register_handler(tb_logger)
+    trainer.check_ready()
+    trainer.train(config.TRAINING.epochs_stove, train_only=True, pretrain=False, visdom=True)
