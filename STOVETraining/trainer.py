@@ -21,7 +21,10 @@ class MONetTrainer(AbstractTrainer):
                     Tracer()()
         self.optimizer.step()
         if self.num_steps % 150 == 0 and kwargs['visdom']:
-            self.visdom_logger.log_visdom(data['X'].flatten(end_dim=1), data_dict['masks'], data_dict['reconstruction'], 6)
+            if kwargs['pretrain']:
+                self.visdom_logger.log_visdom(data['X'].flatten(end_dim=1), data_dict['masks'], data_dict['reconstruction'], 6)
+            else:
+                self.visdom_logger.log_visdom(data['X'][0], data_dict['masks'][0], data_dict['reconstruction'][0], 6)
         self.num_steps += 1
         
         return data_dict

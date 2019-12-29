@@ -414,9 +414,9 @@ class MONetStove(nn.Module):
         
         # construct output dict
         reconstructions = imgs_forward.view(batch, T-skip, *image_shape)
-        reconstructions = torch.cat((masks_init.view(batch, skip, *image_shape), reconstructions), 1)
-        masks = masks.view(batch, T-skip, num_obj, *image_shape[1:])
-        masks = torch.cat((masks.view(batch, skip, num_obj, *image_shape[1:], masks)), 1)
+        reconstructions = torch.cat((imgs_model.view(batch, skip, *image_shape), reconstructions), 1)
+        masks = masks.view(batch, T-skip, num_obj+1, *image_shape[1:])
+        masks = torch.cat((masks_init.view(batch, skip, num_obj+1, *image_shape[1:]), masks), 1)
         prop_dict = {
                 'average_elbo': augmented_elbo.detach().cpu(),
                 'trans_lik': trans_lik.detach().cpu(),

@@ -13,7 +13,7 @@ class VisdomLogger():
     def visualize_masks(self, imgs, masks, recons):
         # print('recons min/max', recons.min().item(), recons.max().item())
         recons = np.clip(recons, 0., 1.)
-        colors = [(0, 0, 0), (255, 0, 0), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0), (255, 255, 255)]
+        colors = [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255), (255, 0, 255), (255, 255, 0), (255, 255, 255)]
         colors.extend([(c[0]//2, c[1]//2, c[2]//2) for c in colors[1:]])
         colors.extend([(c[0]//4, c[1]//4, c[2]//4) for c in colors[1:]])
         colors.extend([(c[0]//8, c[1]//8, c[2]//8) for c in colors[1:]])
