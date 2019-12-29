@@ -413,8 +413,10 @@ class MONetStove(nn.Module):
                        self.img_model.gamma * mask_recon_loss_masked
         
         # construct output dict
-        # reconstructions = imgs_forward.view(batch, T-skip, *image_shape)
-        # masks = masks.view(batch, T-skip, num_obj, *image_shape[1:])
+        reconstructions = imgs_forward.view(batch, T-skip, *image_shape)
+        reconstructions = torch.cat((masks_init.view(batch, skip, *image_shape), reconstructions), 1)
+        masks = masks.view(batch, T-skip, num_obj, *image_shape[1:])
+        masks = torch.cat((masks.view(batch, skip, num_obj, *image_shape[1:], masks)), 1)
         prop_dict = {
                 'average_elbo': augmented_elbo.detach().cpu(),
                 'trans_lik': trans_lik.detach().cpu(),
@@ -423,7 +425,7 @@ class MONetStove(nn.Module):
                 'elbo': elbo.detach().cpu(),
                 'z_s': z_s.cpu().detach(),
                 'img_lik_mean': torch.mean(torch.cat((img_lik_forward_masked, img_lik_model_masked), 1)).detach().cpu(),
-                'reconstruction': imgs_forward.cpu().detach(),
+                'reconstruction': reconstructions.cpu().detach(),
                 'masks': masks.detach().cpu()
                 }
 
