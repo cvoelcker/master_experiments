@@ -82,13 +82,15 @@ class MONetInferenceTester(AbstractTrainer):
     def train_step(self, data):
         with torch.no_grad():
         # torch.autograd.set_detect_anomaly(True)
-            print(data['X'].shape)
             loss, data_dict, r = self.model(data['X'], actions=data['action'].cuda().float())
+            pic = data['X'].cpu().detach()
+            new_pic = data_dict['reconstruction'].cpu().detach()
             return {
-                'z': z_full, 
-                'r': r, 
-                'imgs': (data['X'] * 255).type_as(torch.ByteTensor()),
-                'imgs_inferred': (data_dict['imgs'] * 255).type_as(torch.ByteTensor())}
+                'z': data_dict['z_s'].cpu().detach(), 
+                'r': r.cpu().detach(), 
+                'imgs': (data['X'] * 255).type_as(torch.ByteTensor()).cpu().detach(),
+                'imgs_inferred': (data_dict['reconstruction'] * 255).type_as(torch.ByteTensor()).cpu().detach(),
+                'mse': torch.sum((pic - new_pic) ** 2, (-3, -2, -1))}
 
     def check_ready(self):
         if self.train_dataloader is None:

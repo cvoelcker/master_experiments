@@ -40,8 +40,8 @@ else:
     np.random.seed(config.EXPERIMENT.seed)
     torch.manual_seed(config.EXPERIMENT.seed)
 
-config, config_object = setup_experiment(config, config_object, debug=False)
 monet = get_model(config, MONetStove, load_run, run_name, run_number).cuda()
+config, config_object = setup_experiment(config, config_object, debug=False)
 
 run_path = get_run_path(
         config.EXPERIMENT.experiment_dir,
@@ -50,12 +50,6 @@ run_path = get_run_path(
 
 data_config = config.DATA
 
-run_path = get_run_path(
-        config.EXPERIMENT.experiment_dir,
-        config.EXPERIMENT.run_name,
-        config.EXPERIMENT.run_number)
-
-data_config = config.DATA
 training_config = config.TRAINING
 
 if config.EXPERIMENT.game == 'billards':
@@ -65,7 +59,7 @@ else:
 
 source_loader = generators.FunctionLoader(
         generate_envs_data,
-        {'env': env, 'num_runs': 1, 'run_len': 500})
+        {'env': env, 'num_runs': 10, 'run_len': 100})
 
 transformers = [
         transformers.TorchVisionTransformerComposition(config.DATA.transform, config.DATA.shape),
@@ -76,11 +70,9 @@ data = SequenceDictDataSet(source_loader, transformers, 50)
 
 trainer = setup_trainer(MONetInferenceTester, monet, training_config, data)
 
-checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))
-trainer.register_handler(checkpointing)
-regular_logging = file_handler.StepFileHandler(os.path.join(run_path, 'data'), log_name_list=['z', 'r', 'imgs', 'imgs_inferred'])
+regular_logging = file_handler.StepFileHandler(os.path.join(run_path, 'data'), log_name_list=['mse', #'z', 'r', 'imgs', 'imgs_inferred', 'mse'
+    ])
 trainer.register_handler(regular_logging)
-trainer.register_handler(tb_logger)
 
 trainer.train(config.TRAINING.epochs, train_only=True)
 

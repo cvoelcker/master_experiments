@@ -144,12 +144,14 @@ class SLACAgent():
             _, probs, _ = self.q_1.sample_action(next_latents)
             next_q1 = self.q_1_target(next_latents)
             next_q2 = self.q_2_target(next_latents)
-            next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
             # old update
-            # next_q = torch.log(torch.sum(trch.exp(next_q, -1)))
+            # next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
+            # next_q = torch.sum(next_q, -1)
             # soft q update
-            next_q = torch.log(torch.sum(torch.exp(next_q, -1)))
+            next_q = torch.logsumexp(torch.min(next_q1, next_q2), -1)
             target_q = (rewards + (1. - dones) * self.gamma * next_q)
+            mean_entropies = torch.mean(torch.sum(probs * probs.log(), -1))
+
 
         curr_q1 = self.q_1(latents)
         curr_q1 = curr_q1.gather(-1, actions) # get the correct part of the multi action q function
@@ -164,7 +166,7 @@ class SLACAgent():
         return q1_loss, q2_loss
 
     def calc_policy_loss(self, latents):
-        _, probs, _ = self.q_1.get_probs(latents)
+        _, probs, _ = self.q_1.sample_action(latents)
         with torch.no_grad():
             q1 = self.q_1(latents)
             q2 = self.q_2(latents)
@@ -309,11 +311,11 @@ class SACAgent():
             _, probs, _ = self.q_1.sample_action(next_obs)
             next_q1 = self.q_1_target(next_obs)
             next_q2 = self.q_2_target(next_obs)
-            next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
             # old update
+            # next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
             # next_q = torch.sum(next_q, -1)
             # soft q update
-            next_q = torch.log(torch.sum(torch.exp(next_q, -1)))
+            next_q = torch.logsumexp(torch.min(next_q1, next_q2), -1)
             target_q = (rewards + (1. - dones) * self.gamma * next_q)
             mean_entropies = torch.mean(torch.sum(probs * probs.log(), -1))
 

@@ -149,25 +149,16 @@ class AbstractQNet(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def get_probs(self, x):
-        action_probs = F.softmax(self(x), -1)
-        action_probs = flatten_probs(action_probs)
-        dist = torch.distributions.Categorical(probs = action_probs)
-        return dist, action_probs, action_probs.log()
-
     def sample_action(self, s):
-        _, probs, log_probs = self.get_probs(s)
-        v_function = torch.log(torch.sum(torch.exp(probs), 1))
-        policy = torch.exp(probs - v_function)
+        q = self(s)
+        v_function = torch.logsumexp(q, 1, keepdim=True)
+        policy = torch.exp(q - v_function)
         dist = torch.distributions.Categorical(probs = policy)
-        return dist.sample(), probs, log_probs
+        return dist.sample(), policy, torch.log(policy)
 
     def sample_max_action(self, s):
-        _, probs, log_probs = self.get_probs(s)
-        v_function = torch.log(torch.sum(torch.exp(probs), 1))
-        policy = torch.exp(probs - v_function)
-        dist = torch.distributions.Categorical(probs = policy)
-        return torch.argmax(probs, -1), probs, log_probs
+        _, policy, log_policy = self.sample_action(s)
+        return torch.argmax(policy, -1), policy, log_policy
 
 
 class GraphQNet(AbstractQNet):
