@@ -145,10 +145,10 @@ class SLACAgent():
             next_q1 = self.q_1_target(next_latents)
             next_q2 = self.q_2_target(next_latents)
             # old update
-            # next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
-            # next_q = torch.sum(next_q, -1)
+            next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
+            next_q = torch.sum(next_q, -1)
             # soft q update
-            next_q = torch.logsumexp(torch.min(next_q1, next_q2), -1)
+            # next_q = torch.logsumexp(torch.min(next_q1, next_q2), -1)
             target_q = (rewards + (1. - dones) * self.gamma * next_q)
             mean_entropies = torch.mean(torch.sum(probs * probs.log(), -1))
 
@@ -312,10 +312,10 @@ class SACAgent():
             next_q1 = self.q_1_target(next_obs)
             next_q2 = self.q_2_target(next_obs)
             # old update
-            # next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
-            # next_q = torch.sum(next_q, -1)
+            next_q = probs * (torch.min(next_q1, next_q2) - self.alpha * probs.log())
+            next_q = torch.sum(next_q, -1)
             # soft q update
-            next_q = torch.logsumexp(torch.min(next_q1, next_q2), -1)
+            # next_q = torch.logsumexp(torch.min(next_q1, next_q2), -1)
             target_q = (rewards + (1. - dones) * self.gamma * next_q)
             mean_entropies = torch.mean(torch.sum(probs * probs.log(), -1))
 

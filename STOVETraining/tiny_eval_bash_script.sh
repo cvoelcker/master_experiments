@@ -1,5 +1,5 @@
 #!/bin/bash
-for i in `seq 1 200`;
+for i in `seq 16 200`;
 do
-python check_inference.py experiments/visdom-test/run_029/config.yml --load-run --run-number 29 --checkpoint-number $i
+python check_inference.py experiments/constrained-different-mean/run_033/config.yml --load-run --run-number 5 --checkpoint-number $i
 done

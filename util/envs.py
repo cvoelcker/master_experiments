@@ -133,7 +133,7 @@ class AvoidanceTask(Task):
 class PhysicsEnv:
     """Base class for the physics environments."""
 
-    def __init__(self, n=3, r=1., m=1., hw=10, granularity=5, res=32, t=1.,
+    def __init__(self, n=3, r=1., m=1., hw=10, granularity=2, res=32, t=1.,
                  init_v_factor=0, friction_coefficient=0., seed=None,
                  sprites=False):
         """

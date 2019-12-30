@@ -150,11 +150,11 @@ class AbstractQNet(nn.Module):
         super().__init__()
 
     def sample_action(self, s):
-        q = self(s)
-        v_function = torch.logsumexp(q, 1, keepdim=True)
-        policy = torch.exp(q - v_function)
-        dist = torch.distributions.Categorical(probs = policy)
-        return dist.sample(), policy, torch.log(policy)
+        q = F.softmax(self(s), -1)
+        # v_function = torch.logsumexp(q, 1, keepdim=True)
+        # policy = torch.exp(q - v_function)
+        dist = torch.distributions.Categorical(probs = q)
+        return dist.sample(), q, torch.log(q)
 
     def sample_max_action(self, s):
         _, policy, log_policy = self.sample_action(s)
