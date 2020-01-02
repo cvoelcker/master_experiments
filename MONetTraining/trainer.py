@@ -8,7 +8,10 @@ from util.visdom import VisdomLogger
 class MONetTrainer(AbstractTrainer):
 
     def train_step(self, data, **kwargs):
-        loss, data_dict = self.model(data, 0.2)
+        if 'threshold' in kwargs.keys():
+            loss, data_dict = self.model(data, 0.2)
+        else:
+            loss, data_dict = self.model(data)
         self.optimizer.zero_grad()
         torch.mean(loss).backward()
         if self.clip_gradient:

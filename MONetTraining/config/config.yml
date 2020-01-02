@@ -32,7 +32,7 @@ TRAINING:
         optimizer_name: Adam
         lr: 0.0001
     batch_size: 64
-    epochs: 50
+    epochs: 100
     reshape: False
     summarize: False
     parallel: True

@@ -1,0 +1,49 @@
+DATA:
+  data_dir: test_atari
+  data_name: billards
+  shape:
+  - 128
+  - 128
+  - 3
+  transform:
+  - reshape
+  - torch
+  type: directory
+EXPERIMENT:
+  device: cuda
+  experiment_dir: experiments
+  game: DemonAttack-v0
+  load_run: false
+  log_every: 50
+  overwrite: false
+  run_name: atari
+  run_number: 0
+MODULE:
+  beta: 1.0
+  bg_sigma: 0.01
+  channel_base: 8
+  constrain_theta: true
+  fg_sigma: 0.05
+  gamma: 0.1
+  image_shape:
+  - 128
+  - 128
+  latent_dim: 32
+  latent_prior: 1.0
+  num_blocks: 2
+  num_slots: 6
+  patch_shape:
+  - 16
+  - 15
+  predict_masks: false
+TRAINING:
+  batch_size: 64
+  clip_gradient: true
+  clip_gradient_value: 20
+  epochs: 100
+  optimizer:
+    lr: 0.0001
+    optimizer_name: Adam
+  parallel: true
+  reshape: false
+  summarize: false

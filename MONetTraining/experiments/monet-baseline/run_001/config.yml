@@ -38,7 +38,7 @@ TRAINING:
   batch_size: 64
   clip_gradient: true
   clip_gradient_value: 20
-  epochs: 50
+  epochs: 100
   optimizer:
     lr: 0.0001
     optimizer_name: Adam

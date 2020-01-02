@@ -74,7 +74,11 @@ class DecoderNet(nn.Module):
             nn.Conv2d(64, 64, 3, padding=(1, 1)),
             nn.ReLU(inplace=False),
             nn.Conv2d(64, 3, 1),
+<<<<<<< Updated upstream
             nn.Sigmoid()
+=======
+            nn.Sigmoid(),
+>>>>>>> Stashed changes
         )
 
         # coordinate patching trick

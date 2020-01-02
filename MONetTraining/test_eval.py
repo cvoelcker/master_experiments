@@ -41,11 +41,13 @@ class MONetEvaluator():
             all_imgs = {}
             all_recons = {}
             all_losses = {}
+            all_masks = {}
             for key in self.models.keys():
                 print(key)
                 imgs = []
                 recons = []
                 losses = []
+                masks = []
                 for d in tqdm(self.data):
                     img = self.numpify(d)
                     imgs.append(img)
@@ -55,10 +57,12 @@ class MONetEvaluator():
                     recons.append(recon)
                     loss = np.mean((img - recon) ** 2)
                     losses.append(loss)
+                    masks.append(self.numpify(results['masks']))
                 all_imgs[key] = imgs
                 all_recons[key] = recons
                 all_losses[key] = losses
-        return all_losses, all_recons, all_imgs
+                all_masks[key] = masks
+        return all_losses, all_recons, all_imgs, all_masks
 
 
 def main():
@@ -74,9 +78,10 @@ def main():
     
     all_games = [''.join((s.capitalize() for s in g.split('_'))) + '-v0' for g in all_games]
     
-    monet_config = ConfigGenerator('trained_baselines/monet/config.yml')
-    spatial_monet_config = ConfigGenerator('experiments/demon-attack/run_000/config.yml')
-    vae_config = ConfigGenerator('trained_baselines/vae/config.yml')
+    monet_config = ConfigGenerator('/home/cvoelcker/thesis/master_experiments/MONetTraining/experiments/monet-baseline/run_003/config.yml')
+    spatial_monet_config = ConfigGenerator('experiments/baseline-vae-simple/run_003/config.yml')
+    vae_config = ConfigGenerator('experiments/baseline-vae-simple/run_003/config.yml')
+    vae_config = ConfigGenerator('/home/cvoelcker/thesis/master_experiments/MONetTraining/experiments/monet-baseline/run_003/config.yml')
     monet_config = monet_config(argv[1:])
     spatial_monet_config = spatial_monet_config(argv[1:])
     # genesis_config =
@@ -87,16 +92,16 @@ def main():
         print(f'Running {game}')
     
         # monet_checkpoint = f'trained_baselines/monet/checkpoints_{game}/model_state_0000050.save'
-        spatial_monet_checkpoint = f'experiments/demon-attack/run_000/checkpoints_{game}/model_state_0000020.save'
+        # spatial_monet_checkpoint = f'experiments/demon-attack/run_000/checkpoints_{game}/model_state_0000020.save'
         # genesis_checkpoint = f'trained_baselines/monet/checkpoints_{game}/model_state_0000050.save'
-        # vae_checkpoint = f'trained_baselines/vae/checkpoints_{game}/model_state_0000050.save'
+        monet_checkpoint = f'experiments/monet-baseline/run_003/checkpoints_{game}/model_state_0000100.save'
     
-        # monet = nn.DataParallel(Monet(**monet_config.MODULE._asdict())).cuda()
-        # monet.load_state_dict(torch.load(monet_checkpoint))
+        monet = nn.DataParallel(Monet(**monet_config.MODULE._asdict())).cuda()
+        monet.load_state_dict(torch.load(monet_checkpoint))
     
-        spatial_monet = MaskedAIR(**spatial_monet_config.MODULE._asdict()).cuda()
-        # spatial_monet = nn.DataParallel(MaskedAIR(**spatial_monet_config.MODULE._asdict())).cuda()
-        spatial_monet.load_state_dict(torch.load(spatial_monet_checkpoint))
+        # spatial_monet = MaskedAIR(**spatial_monet_config.MODULE._asdict()).cuda()
+        # # spatial_monet = nn.DataParallel(MaskedAIR(**spatial_monet_config.MODULE._asdict())).cuda()
+        # spatial_monet.load_state_dict(torch.load(spatial_monet_checkpoint))
     
         # genesis = GENESIS(**genesis_config._asdict()).cuda
         # genesis.load_state_dict(torch.load(genesis_checkpoint))
@@ -105,8 +110,8 @@ def main():
         # vae.load_state_dict(torch.load(vae_checkpoint))
     
         all_models = {
-            # 'monet': monet,
-            'spatial_monet': spatial_monet,
+            'monet': monet,
+            # 'spatial_monet': spatial_monet,
             # 'genesis': genesis,
             # 'vae': vae
         }
@@ -124,12 +129,13 @@ def main():
         data = BasicDataSet(source_loader, data_transformers)
     
         evaluator = MONetEvaluator(data, all_models)
-        losses, recons, imgs = evaluator.evaluate()
-        if not os.path.exists(f'eval/{game}'):
-            os.mkdir(f'eval/{game}')
-        pickle.dump(losses, open(f'eval/{game}/mse.pkl', 'wb'))
-        pickle.dump(recons, open(f'eval/{game}/recons.pkl', 'wb'))
-        pickle.dump(imgs, open(f'eval/{game}/imgs.pkl', 'wb'))
+        losses, recons, imgs, masks = evaluator.evaluate()
+        if not os.path.exists(f'eval-monet/{game}'):
+            os.makedirs(f'eval-monet/{game}', exist_ok=True)
+        pickle.dump(losses, open(f'eval-monet/{game}/mse.pkl', 'wb'))
+        pickle.dump(recons, open(f'eval-monet/{game}/recons.pkl', 'wb'))
+        pickle.dump(imgs, open(f'eval-monet/{game}/imgs.pkl', 'wb'))
+        pickle.dump(masks, open(f'eval-monet/{game}/masks.pkl', 'wb'))
 
 
 if __name__ == '__main__':

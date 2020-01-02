@@ -1,3 +1,6 @@
 gym[atari]
 PyConfigMaker
 dill
+visdom
+imageio
+spriteworld

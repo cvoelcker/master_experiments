@@ -16,25 +16,21 @@ from torch_runner.data.base import BasicDataSet
 from torch_runner.training_setup import setup_trainer
 from torch_runner.handlers import file_handler, tb_handler
 
-from trainer import MONetTrainer, GECOTrainer
+from trainer import MONetTrainer
 from util.data import generate_envs_data
 
 all_games = [
-        'adventure', 'air_raid', 'alien', 'amidar', 'assault',
-        'asterix', 'asteroids', 'atlantis', 'bank_heist', 'battle_zone',
-        'beam_rider', 'berzerk', 'bowling', 'boxing', 'breakout',
-        'carnival', 'centipede', 'chopper_command', 'crazy_climber', 'demon_attack',
-        'double_dunk', 'elevator_action', 'enduro', 'fishing_derby', 'freeway',
-        'frostbite', 'gopher', 'gravitar', 'hero', 'ice_hockey',
-
-        'jamesbond', 'journey_escape', 'kangaroo', 'krull', 'kung_fu_master',
-        'montezuma_revenge', 'ms_pacman', 'name_this_game', 'phoenix', 'pitfall',
-        'pong', 'pooyan', 'private_eye', 'qbert', 'riverraid',
-        'road_runner', 'robotank', 'seaquest', 'skiing', 'solaris',
-        'space_invaders', 'star_gunner', 'tennis', 'time_pilot', 'tutankham',
-        'up_n_down', 'venture', 'video_pinball', 'wizard_of_wor', 'yars_revenge',
-        'zaxxon']
-        # 'defender',  ## apparently, this is really broken
+        'assault',
+        'demon_attack',
+        'boxing',
+        'skiing',
+        'double_dunk',
+        'kung_fu_master',
+        'phoenix',
+        'beam_rider',
+        'asteroids',
+        'bank_heist'
+        ]
 
 all_games = [''.join((s.capitalize() for s in g.split('_'))) + '-v0' for g in all_games]
 
@@ -52,10 +48,10 @@ training_config = config.TRAINING
 
 print('running second half')
 l = len(all_games)
-for game in all_games[int(l/2):]:
+for game in all_games:
         print('Running {}'.format(game))
-        # monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
         monet = nn.DataParallel(GENESIS(**config.MODULE._asdict())).cuda()
+        # monet = nn.DataParallel(Monet(config.MODULE, 128, 128)).cuda()
         print('Generated model')
         env = gym.make(game)
         
@@ -70,7 +66,7 @@ for game in all_games[int(l/2):]:
         print('Loading data')
         data = BasicDataSet(source_loader, data_transformers)
         print('Setting up trainer')
-        trainer = setup_trainer(GECOTrainer, monet, training_config, data)
+        trainer = setup_trainer(MONetTrainer, monet, training_config, data)
         check_path = os.path.join(run_path, 'checkpoints_{}'.format(game))
         if not os.path.exists(check_path):
                 os.mkdir(check_path)
@@ -82,8 +78,6 @@ for game in all_games[int(l/2):]:
         tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging_{}'.format(game), log_name_list=['loss', 'kl_loss', 'mask_loss', 'p_x_loss'])
         print('Running training')
         trainer.register_handler(tb_logger)
-
-        trainer.ready()
         
         # MONet init block
         # for w in trainer.model.parameters():
@@ -91,5 +85,5 @@ for game in all_games[int(l/2):]:
         #     torch.nn.init.normal_(w, mean=0., std=std_init)
         # trainer.model.init_background_weights(trainer.train_dataloader.dataset.get_all())
         
-        trainer.train(config.TRAINING.epochs, train_only=True)
+        trainer.train(config.TRAINING.epochs, train_only=True, visdom=False)
         env.close()
