@@ -20,23 +20,24 @@ class EncoderNet(nn.Module):
             nn.ReLU(inplace=False),
             nn.MaxPool2d(2, stride=2),
 
-            nn.Conv2d(32, 32, 3, padding=(1, 1)),
-            nn.ReLU(inplace=False),
-            nn.MaxPool2d(2, stride=2),
-
             nn.Conv2d(32, 64, 3, padding=(1, 1)),
             nn.ReLU(inplace=False),
             nn.MaxPool2d(2, stride=2),
 
-            # nn.Conv2d(64, 64, 3, padding=(1,1)),
-            # nn.ReLU(inplace=False),
-            # nn.MaxPool2d(2, stride=2),
+            nn.Conv2d(64, 64, 3, padding=(1, 1)),
+            nn.ReLU(inplace=False),
+            nn.MaxPool2d(2, stride=2),
+
+            nn.Conv2d(64, 128, 3, padding=(1,1)),
+            nn.ReLU(inplace=False),
+            nn.MaxPool2d(2, stride=2),
         )
         self.conv_size = int(
-            64 * self.image_shape[0] / (2 ** 3) * self.image_shape[1] / (
-                    2 ** 3))
+            128 * self.image_shape[0] / ((2 ** 4) * self.image_shape[1]) ** 2
         self.mlp = nn.Sequential(
+            nn.Linear(self.conv_size, self.conv_size),
             nn.Linear(self.conv_size, 2 * self.latent_dim),
+            nn.Linear(2 * self.latent_dim, 2 * self.latent_dim),
             nn.ReLU(inplace=False))
         self.mean_mlp = nn.Sequential(
             nn.Linear(self.latent_dim, self.latent_dim))
