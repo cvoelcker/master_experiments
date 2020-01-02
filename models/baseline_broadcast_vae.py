@@ -32,8 +32,7 @@ class EncoderNet(nn.Module):
             nn.ReLU(inplace=False),
             nn.MaxPool2d(2, stride=2),
         )
-        self.conv_size = int(
-            128 * self.image_shape[0] / ((2 ** 4) * self.image_shape[1]) ** 2
+        self.conv_size = 128 * image_shape[0] ** 2) // (2 ** 4) ** 2
         self.mlp = nn.Sequential(
             nn.Linear(self.conv_size, self.conv_size),
             nn.Linear(self.conv_size, 2 * self.latent_dim),
