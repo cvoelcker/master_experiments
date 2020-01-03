@@ -16,7 +16,7 @@ EXPERIMENT:
   experiment: billards
   experiment_dir: experiments
   game: billards
-  load_run: true
+  load_run: false
   log_every: 50
   model: slac
   overwrite: false

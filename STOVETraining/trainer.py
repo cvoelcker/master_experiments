@@ -62,7 +62,10 @@ class MONetTester(AbstractTrainer):
                     num = data['action'].shape[1],
                     actions=data['action'].cuda().float(),
                     return_imgs=True)
-            return {'z': z_full, 'r': r, 'imgs': (imgs * 255).type_as(torch.ByteTensor())}
+            imgs_recon = (data_dict['reconstruction'] * 255.).cpu().detach().type_as(torch.ByteTensor())
+            imgs_roll = (imgs * 255).cpu().detach().type_as(torch.ByteTensor())
+            imgs = torch.cat([imgs_recon, imgs_roll], 1)
+            return {'z': z_full, 'r': r, 'imgs': imgs}
 
     def check_ready(self):
         if self.train_dataloader is None:

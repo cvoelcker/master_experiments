@@ -210,12 +210,13 @@ class SLACTrainer(RLTrainer):
             }
         }
         self.notify_epoch_handlers(full_model_state)
-        returns = np.zeros((self.eval_epochs, 100), dtype=np.int8)
-        all_obs = np.zeros((self.eval_epochs, 100, 32, 32, 3))
+        returns = np.zeros((self.eval_epochs, 10000), dtype=np.int8)
+        all_obs = np.zeros((self.eval_epochs, 10000, *self.eval_env.observation_space.shape))
         with torch.no_grad():
             for i in range(self.eval_epochs):
-                last_obs, eval_latents = self.init_latent(self.eval_env)
-                for j in range(100):
+                eval_obs, eval_latents = self.init_latent(self.eval_env)
+                for j in range(10000):
+                    all_obs[i, j] = eval_obs
                     action, _, _ = self.model.q_1.sample_max_action(eval_latents.cuda())
                     action = action.detach().cpu().numpy()
                     eval_obs, r, d, info = self.eval_env.step(action)
@@ -223,12 +224,10 @@ class SLACTrainer(RLTrainer):
                     if d:
                         eval_obs, eval_latents = self.init_latent(self.eval_env, write=False)
                     else:
-                        _obs = self.memory.resize(last_obs)
+                        _obs = self.memory.resize(eval_obs)
                         _obs = self.memory.torch_transform(_obs[np.newaxis, :]).unsqueeze(0)
                         action = self.memory.torch_transform(action[np.newaxis, :], action_expand=True)
                         eval_latents = self.model.model.update_latent(_obs, action, eval_latents.cuda())
-                    last_obs = eval_obs
-                    all_obs[i, j] = eval_obs
         return np.mean(np.sum(returns, -1)), np.var(np.sum(returns, -1)), all_obs
     
     def pretrain(self, batch_size, epochs, img=False):
@@ -265,7 +264,7 @@ class SACTrainer(RLTrainer):
                 'q2_target': self.model.q_2_target.state_dict(),
             }
         }
-        all_obs = np.zeros((self.eval_epochs, 100, 32, 32, 3))
+        all_obs = np.zeros((self.eval_epochs, 100, 210, 160, 3))
         self.notify_epoch_handlers(full_model_state)
         returns = np.zeros((self.eval_epochs, 100), dtype=np.int8)
         with torch.no_grad():

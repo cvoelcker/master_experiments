@@ -75,4 +75,3 @@ regular_logging = file_handler.StepFileHandler(os.path.join(run_path, 'data'), l
 trainer.register_handler(regular_logging)
 
 trainer.train(5, train_only=True)
-

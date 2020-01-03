@@ -119,6 +119,7 @@ class SLACModel(nn.Module):
             (latent1_post_dists, latent2_post_dists) =\
             self.latent.sample_posterior(features, new_action)
         latents = torch.cat((latent1_post_samples, latent2_post_samples), -1)
+        print(latents.mean(-1))
         return latents[:, -1]
 
 

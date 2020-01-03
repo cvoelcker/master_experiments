@@ -140,11 +140,9 @@ class MONetStove(nn.Module):
         assert torch.all(torch.isfinite(joined_z_std_full))
         assert torch.all(torch.isfinite(joined_z_full))
         dist = Normal(joined_z_full, joined_z_std_full)
-        # print(joined_z_std_full.min())
 
         z_s = dist.rsample()
         assert torch.all(torch.isfinite(z_s))
-        # print(torch.min(joined_z_std_full))
         log_q = dist.log_prob(z_s)
         assert torch.all(torch.isfinite(log_q))
 
@@ -228,8 +226,6 @@ class MONetStove(nn.Module):
         return z_matched, z_std_matched, torch.stack(rotations, 1)
 
     def encode_sort_img(self, x, last_z = None):
-        # print(x.max())
-        # print(x.min())
         T = x.shape[1]
         z_img, z_img_std = self.img_model.build_flat_image_representation(
             x.flatten(end_dim=1), return_dists=True)
@@ -303,7 +299,6 @@ class MONetStove(nn.Module):
             # obtain full state parameters combining dyn and supair
             # tensors are updated afterwards to prevent inplace assignment issues
 
-            # print(torch.mean(cur_z_dyn[..., :2 * self.img_model.graph_depth] - z_img_full))
 
             cur_z, cur_log_z, cur_z_mean, cur_z_std = self.full_state(
                     cur_z_dyn, cur_z_dyn_std, z_img_full[:, t], z_img_std_full[:, t])
@@ -545,5 +540,11 @@ class MONetStove(nn.Module):
     def update_latent(self, obs, actions, latent):
         # if a sequence should be appended with more latents
         z_img, z_img_std, _ = self.encode_sort_img(obs, latent)
+        # quick workaround used, since the obs is not used to infer the first latent
+        # anymore and can therefore not be discarded
+        obs = torch.cat([obs[:, 0:1], obs], 1)
+        z_img = torch.cat([z_img[:, 0:1], z_img], 1)
+        z_img_std = torch.cat([z_img_std[:, 0:1], z_img_std], 1)
         z, _, _, _, _, _, _ = self.infer_dynamics(obs, actions, z_img, z_img_std, last_z=latent, skip=1)
+        print(z.mean(-1))
         return z[:, -1]
