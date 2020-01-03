@@ -111,7 +111,7 @@ for i, game in enumerate(all_games):
         # for w in trainer.model.parameters():
         #     std_init = 0.01
         #     torch.nn.init.normal_(w, mean=0., std=std_init)
-        # trainer.model.init_background_weights(trainer.train_dataloader.dataset.get_all())
+        trainer.model.init_background_weights(trainer.train_dataloader.dataset.get_all())
         
         trainer.train(config.TRAINING.epochs, train_only=True, visdom=False)
         env.close()
