@@ -74,5 +74,5 @@ regular_logging = file_handler.StepFileHandler(os.path.join(run_path, 'data'), l
     ])
 trainer.register_handler(regular_logging)
 
-trainer.train(config.TRAINING.epochs, train_only=True)
+trainer.train(5, train_only=True)
 

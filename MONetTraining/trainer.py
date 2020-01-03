@@ -17,9 +17,9 @@ class MONetTrainer(AbstractTrainer):
         if self.clip_gradient:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_gradient_value)
         self.optimizer.step()
-        if self.num_steps % 150 == 0 and kwargs['visdom']:
-            self.visdom_logger.log_visdom(data, data_dict['masks'], data_dict['reconstruction'])
-        self.num_steps += 1
+        # if self.num_steps % 150 == 0 and kwargs['visdom']:
+        #     self.visdom_logger.log_visdom(data, data_dict['masks'], data_dict['reconstruction'])
+        # self.num_steps += 1
         return data_dict
 
     def check_ready(self):
@@ -29,13 +29,13 @@ class MONetTrainer(AbstractTrainer):
             return False
         if self.model is None:
             return False
-        self.visdom_logger = VisdomLogger(8456, 'quick_try_4')
+        # self.visdom_logger = VisdomLogger(8456, 'quick_try_4')
         self.num_steps = 0
         return True
 
     def compile_epoch_info_dict(self, data_dict, epoch, **kwargs):
-        self.model.beta = 1 / (1 + np.exp(-(epoch/4 - 10)))
-        self.model.gamma = 1 / (1 + np.exp(-(epoch/4 - 10)))
+        # self.model.beta = 1 / (1 + np.exp(-(epoch/4 - 10)))
+        # self.model.gamma = 1 / (1 + np.exp(-(epoch/4 - 10)))
         return {'model_state': self.model.state_dict()}
 
 

@@ -80,10 +80,11 @@ tb_logging_list = ['average_elbo', 'trans_lik', 'log_z_f', 'img_lik_forward', 'e
 tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
 trainer.register_handler(tb_logger)
 
-trainer.model.img_model.init_background_weights(trainer.train_dataloader.dataset.get_all())
+if config.EXPERIMENT.model == 'm-stove':
+    trainer.model.img_model.init_background_weights(trainer.train_dataloader.dataset.get_all())
 
 trainer.check_ready()
-trainer.train(config.TRAINING.epochs, train_only=True, pretrain=config.TRAINING.pretrain, visdom=True)
+trainer.train(config.TRAINING.epochs, train_only=True, pretrain=config.TRAINING.pretrain, visdom=False)
 
 if config.TRAINING.pretrain:
     monet.img_model.beta = config.MODULE.MONET.beta
@@ -99,4 +100,4 @@ if config.TRAINING.pretrain:
     tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging', log_name_list=tb_logging_list)
     trainer.register_handler(tb_logger)
     trainer.check_ready()
-    trainer.train(config.TRAINING.epochs_stove, train_only=True, pretrain=False, visdom=True)
+    trainer.train(config.TRAINING.epochs_stove, train_only=True, pretrain=False, visdom=False)

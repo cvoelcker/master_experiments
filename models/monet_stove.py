@@ -314,12 +314,13 @@ class MONetStove(nn.Module):
             z_std[:, t] = cur_z_std
             z_dyn[:, t] = cur_z_dyn
             z_dyn_std[:, t] = cur_z_dyn_std
+            rewards[:, t] = reward.squeeze(-1)
             
             # assert not torch.any(torch.isnan(log_z))
 
         return z, log_z, z_dyn, z_dyn_std, z_mean, z_std, rewards
 
-    def stove_forward(self, x, actions=None, x_color=None, last_z = None, mask=None):
+    def stove_forward(self, x, actions=None, x_color=None, last_z = None, mask=None, rewards=None):
         """Forward pass of STOVE.
 
         n (batch_size), T (sequence length), c (number of channels), w (image
@@ -359,7 +360,7 @@ class MONetStove(nn.Module):
         # At t=1 we have no dyn, however can get full state from supair via
         # supair from t=0. This is used as init for dyn.
 
-        z, log_z, z_dyn, z_dyn_std, z_mean, z_std, rewards = self.infer_dynamics(
+        z, log_z, z_dyn, z_dyn_std, z_mean, z_std, rewards_predicted = self.infer_dynamics(
             x, actions, z_img, z_img_std, last_z, skip)
         z_s = z[:, skip:]
         z_dyn_s = z_dyn[:, skip:]
@@ -409,8 +410,9 @@ class MONetStove(nn.Module):
         augmented_elbo = torch.mean(elbo) + \
                        self.pure_img_weight * torch.mean(img_lik_model_masked) + \
                        self.dyn_recon_weight * torch.mean(img_lik_forward_dyn_masked) + \
-                       self.img_model.gamma * torch.mean(mask_init_recon_loss) + \
-                       self.img_model.gamma * mask_recon_loss_masked
+                       self.img_model.gamma * torch.mean(mask_init_recon_loss)
+        if rewards is not None:
+            augmented_elbo -= torch.mean((rewards - rewards_predicted) ** 2)
         
         # construct output dict
         reconstructions = imgs_forward.view(batch, T-skip, *image_shape)
@@ -430,7 +432,7 @@ class MONetStove(nn.Module):
                 }
 
         if self.action_conditioned:
-            return augmented_elbo, prop_dict, rewards[:, skip:]
+            return augmented_elbo, prop_dict, rewards_predicted[:, skip:]
             # return elbo, prop_dict, rewards[:, skip:]
         else:
             return augmented_elbo, prop_dict
@@ -533,7 +535,7 @@ class MONetStove(nn.Module):
             loss, d = self.img_model(x.flatten(end_dim=1))
             return -1. * loss, d, None
         else:
-            return self.stove_forward(x, actions=actions, mask=mask)
+            return self.stove_forward(x, actions=actions, mask=mask, rewards=rewards)
 
     def infer_latent(self, obs, actions):
         z_img, z_img_std, _ = self.encode_sort_img(obs)

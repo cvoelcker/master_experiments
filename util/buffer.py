@@ -29,11 +29,11 @@ class StateBuffer(Dataset):
 
     def __getitem__(self, idx: int):
         assert idx < (self.fill - self.seq_len) and (self.fill >= self.seq_len)
-        x = self.torch_transform(self.s_buffer[idx:idx+self.seq_len]).float()
+        x = self.torch_transform(self.s_buffer[idx:idx+self.seq_len])
         a = self.torch_transform(self.a_buffer[idx:idx+self.seq_len], action_expand=True)
         a_idx = self.torch_transform(self.a_buffer[idx:idx+self.seq_len]).long()
-        r = self.torch_transform(self.r_buffer[idx:idx+self.seq_len]).float()
-        d = self.torch_transform(self.d_buffer[idx:idx+self.seq_len]).float()
+        r = self.torch_transform(self.r_buffer[idx:idx+self.seq_len])
+        d = self.torch_transform(self.d_buffer[idx:idx+self.seq_len])
         return {'X': x, 'a': a, 'r': r, 'd': d, 'a_idx': a_idx}
 
     def put(self, obs: np.array, actions: np.array, rewards: np.array, dones: np.array):

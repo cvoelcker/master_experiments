@@ -20,9 +20,10 @@ def get_latent_model(config, model_class, load_run, run_name, run_number):
         monet = MaskedAIR(**monet_config._asdict())
         dynamics = Dynamics(dynamics_config, monet_config, stove_config)
         stove = MONetStove(stove_config, dynamics, monet)
-        if load_run:
+        if load_run or run_name == 'cheat':
             print('Loading old model')
             path = get_run_path(config.EXPERIMENT.experiment_dir, run_name, run_number)
+            path = '../STOVETraining/experiments/visdom-test/run_029/'
             path = os.path.join(path, 'checkpoints')
             if not os.path.exists(path):
                 print('Found no model checkpoints')

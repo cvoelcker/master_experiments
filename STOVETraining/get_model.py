@@ -6,6 +6,7 @@ from torch_runner.experiment_setup import get_run_path, find_next_run_number
 from spatial_monet.spatial_monet import MaskedAIR
 from models.monet_stove import MONetStove
 from models.dynamics import Dynamics
+from models.slac_model import SLACModel
 
 
 def get_model(config, model_class, load_run, run_name, run_number):
@@ -15,7 +16,9 @@ def get_model(config, model_class, load_run, run_name, run_number):
     monet = MaskedAIR(**monet_config._asdict())
     dynamics = Dynamics(dynamics_config, monet_config, stove_config)
     stove = MONetStove(stove_config, dynamics, monet)
-    if load_run:
+    if config.EXPERIMENT.model == 'slac':
+        stove = SLACModel(config.DATA.shape, config.MODULE.DYNAMICS.action_space)
+    if load_run or run_name == 'cheat':
         print('Loading old model')
         path = get_run_path(config.EXPERIMENT.experiment_dir, run_name, run_number)
         path = os.path.join(path, 'checkpoints')
@@ -32,3 +35,4 @@ def get_model(config, model_class, load_run, run_name, run_number):
         model_state_dict = torch.load(path)
         stove.load_state_dict(model_state_dict)
     return stove
+

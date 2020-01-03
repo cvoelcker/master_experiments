@@ -54,18 +54,18 @@ class SLACModel(nn.Module):
                  leaky_slope=leaky_slope)
         self.cl = feature_dim
 
-    def forward(self, images_seq, actions_seq, rewards_seq,
-                         dones_seq, pretrain=False):
+    def forward(self, images_seq, actions=None, rewards=None,
+                         mask=None, pretrain=False):
         features_seq = self.latent.encoder(images_seq)
 
         # Sample from posterior dynamics.
         (latent1_post_samples, latent2_post_samples),\
             (latent1_post_dists, latent2_post_dists) =\
-            self.latent.sample_posterior(features_seq, actions_seq)
+            self.latent.sample_posterior(features_seq, actions)
         # Sample from prior dynamics.
         (latent1_pri_samples, latent2_pri_samples),\
             (latent1_pri_dists, latent2_pri_dists) =\
-            self.latent.sample_prior(actions_seq)
+            self.latent.sample_prior(actions)
 
         # KL divergence loss.
         kld_loss = calc_kl_divergence(latent1_post_dists, latent1_pri_dists)
@@ -80,18 +80,28 @@ class SLACModel(nn.Module):
         rewards_seq_dists = self.latent.reward_predictor([
             latent1_post_samples,
             latent2_post_samples,
-            actions_seq, latent1_post_samples,
+            actions, latent1_post_samples,
             latent2_post_samples])
         reward_log_likelihoods =\
-            rewards_seq_dists.log_prob(rewards_seq.unsqueeze(-1)) * (1.0 - dones_seq).unsqueeze(-1)
+            rewards_seq_dists.log_prob(rewards.unsqueeze(-1)) * (1.0 - mask).unsqueeze(-1)
         reward_log_likelihood_loss = reward_log_likelihoods.mean(dim=0).sum()
 
         latent_loss =\
             kld_loss - log_likelihood_loss - reward_log_likelihood_loss
 
-        return -1 * latent_loss, None, None
+        prop_dict = {
+                'average_elbo': latent_loss.detach().cpu(),
+                'trans_lik': kld_loss.detach().cpu(),
+                'log_z_f': kld_loss.detach().cpu(),
+                'img_lik_forward': torch.sum(log_likelihood_loss, -1).detach().cpu(),
+                'z_s': latent1_post_samples.cpu().detach(),
+                'reconstruction': images_seq_dists.mean.cpu().detach(),
+                'masks': torch.zeros_like(images_seq_dists.mean).detach().cpu()
+                }
+
+        return -1 * latent_loss, prop_dict, None
     
-    def infer_latent(self, images_seq, actions_seq):
+    def infer_latent(self, images_seq, actions):
         features_seq = self.latent.encoder(images_seq)
 
         # from IPython.core.debugger import Tracer
@@ -99,7 +109,7 @@ class SLACModel(nn.Module):
         # Sample from posterior dynamics.
         (latent1_post_samples, latent2_post_samples),\
             (latent1_post_dists, latent2_post_dists) =\
-            self.latent.sample_posterior(features_seq, actions_seq)
+            self.latent.sample_posterior(features_seq, actions)
         latents = torch.cat((latent1_post_samples, latent2_post_samples), -1)
         return latents
 
@@ -271,10 +281,10 @@ class LatentNetwork(BaseNetwork):
             latent1_dim + latent2_dim, observation_shape[2],
             std=np.sqrt(0.1), leaky_slope=leaky_slope)
 
-    def sample_prior(self, actions_seq, init_features=None):
+    def sample_prior(self, actions, init_features=None):
         ''' Sample from prior dynamics (with conditionning on the initial frames).
         Args:
-            actions_seq   : (N, S, *action_shape) tensor of action sequences.
+            actions   : (N, S, *action_shape) tensor of action sequences.
             init_features : (N, *) tensor of initial frames or None.
         Returns:
             latent1_samples : (N, S+1, L1) tensor of sampled latent vectors.
@@ -282,8 +292,8 @@ class LatentNetwork(BaseNetwork):
             latent1_dists   : (S+1) length list of (N, L1) distributions.
             latent2_dists   : (S+1) length list of (N, L2) distributions.
         '''
-        num_sequences = actions_seq.size(1)
-        actions_seq = torch.transpose(actions_seq, 0, 1)
+        num_sequences = actions.size(1)
+        actions = torch.transpose(actions, 0, 1)
 
         latent1_samples = []
         latent2_samples = []
@@ -304,7 +314,7 @@ class LatentNetwork(BaseNetwork):
                 # Not conditionning.
                 else:
                     # p(z1(0)) = N(0, I)
-                    latent1_dist = self.latent1_init_prior(actions_seq[t])
+                    latent1_dist = self.latent1_init_prior(actions[t])
                     latent1_sample = latent1_dist.rsample()
                     # p(z2(0) | z1(0))
                     latent2_dist = self.latent2_init_prior(latent1_sample)
@@ -313,11 +323,11 @@ class LatentNetwork(BaseNetwork):
             else:
                 # p(z1(t) | z2(t-1), a(t-1))
                 latent1_dist = self.latent1_prior(
-                    [latent2_samples[t-1], actions_seq[t-1]])
+                    [latent2_samples[t-1], actions[t-1]])
                 latent1_sample = latent1_dist.rsample()
                 # p(z2(t) | z1(t), z2(t-1), a(t-1))
                 latent2_dist = self.latent2_prior(
-                    [latent1_sample, latent2_samples[t-1], actions_seq[t-1]])
+                    [latent1_sample, latent2_samples[t-1], actions[t-1]])
                 latent2_sample = latent2_dist.rsample()
 
             latent1_samples.append(latent1_sample)
@@ -331,20 +341,20 @@ class LatentNetwork(BaseNetwork):
         return (latent1_samples, latent2_samples),\
             (latent1_dists, latent2_dists)
 
-    def sample_posterior(self, features_seq, actions_seq, last_latent=None):
+    def sample_posterior(self, features_seq=None, actions=None, last_latent=None):
         ''' Sample from posterior dynamics.
         Args:
             features_seq : (N, S+1, 256) tensor of feature sequenses.
-            actions_seq  : (N, S, *action_space) tensor of action sequenses.
+            actions  : (N, S, *action_space) tensor of action sequenses.
         Returns:
             latent1_samples : (N, S+1, L1) tensor of sampled latent vectors.
             latent2_samples : (N, S+1, L2) tensor of sampled latent vectors.
             latent1_dists   : (S+1) length list of (N, L1) distributions.
             latent2_dists   : (S+1) length list of (N, L2) distributions.
         '''
-        num_sequences = actions_seq.size(1)
+        num_sequences = actions.size(1)
         features_seq = torch.transpose(features_seq, 0, 1)
-        actions_seq = torch.transpose(actions_seq, 0, 1)
+        actions = torch.transpose(actions, 0, 1)
 
         latent1_samples = []
         latent2_samples = []
@@ -367,11 +377,11 @@ class LatentNetwork(BaseNetwork):
             else:
                 # q(z1(t) | feat(t), z2(t-1), a(t-1))
                 latent1_dist = self.latent1_posterior(
-                    [features_seq[t], latent2_samples[t-1], actions_seq[t-1]])
+                    [features_seq[t], latent2_samples[t-1], actions[t-1]])
                 latent1_sample = latent1_dist.rsample()
                 # q(z2(t) | z1(t), z2(t-1), a(t-1))
                 latent2_dist = self.latent2_posterior(
-                    [latent1_sample, latent2_samples[t-1], actions_seq[t-1]])
+                    [latent1_sample, latent2_samples[t-1], actions[t-1]])
                 latent2_sample = latent2_dist.rsample()
 
             latent1_samples.append(latent1_sample)

@@ -249,7 +249,7 @@ class SACTrainer(RLTrainer):
         self.done = False
         self.obs = self.prepend_zero(self.env.reset())
         self.eval_epochs = config.eval_epochs
-        self.eval_every = 1000
+        self.eval_every = 2500
 
         self.exploration_steps = config.exploration_steps
     
