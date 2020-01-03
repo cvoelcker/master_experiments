@@ -10,6 +10,7 @@ EXPERIMENT:
     log_every: 50
     seed: 0
     random_seed: False
+    model: m-stove
 
 MODULE:
     MONET:

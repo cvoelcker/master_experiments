@@ -10,6 +10,7 @@ EXPERIMENT:
     seed: 0
     random_seed: False
     game: 'billards'
+    model: m-stove
 
 MODULE:
     MONET:

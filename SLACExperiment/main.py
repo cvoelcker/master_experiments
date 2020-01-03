@@ -99,7 +99,7 @@ if config.EXPERIMENT.pretrain_model:
     trainer.pretrain(config.TRAINING.batch_size, config.TRAINING.epochs, img=config.EXPERIMENT.pretrain_img)
     if config.EXPERIMENT.pretrain_img:
         print('Pretraining model')
-        trainer.pretrain(config.TRAINING.batch_size, config.TRAINING.epochs * 20, img=False)
+        trainer.pretrain(config.TRAINING.batch_size, config.TRAINING.epochs * 10, img=False)
     torch.save(trainer.model.model.state_dict(), os.path.join(run_path, 'pretrained_model.torch'))
 
 checkpointing = file_handler.EpochCheckpointHandler(os.path.join(run_path, 'checkpoints'))

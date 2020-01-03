@@ -32,7 +32,7 @@ class EncoderNet(nn.Module):
             nn.ReLU(inplace=False),
             nn.MaxPool2d(2, stride=2),
         )
-        self.conv_size = 128 * image_shape[0] ** 2) // (2 ** 4) ** 2
+        self.conv_size = (128 * image_shape[0] ** 2) // (2 ** 4) ** 2
         self.mlp = nn.Sequential(
             nn.Linear(self.conv_size, self.conv_size),
             nn.Linear(self.conv_size, 2 * self.latent_dim),
@@ -74,11 +74,7 @@ class DecoderNet(nn.Module):
             nn.Conv2d(64, 64, 3, padding=(1, 1)),
             nn.ReLU(inplace=False),
             nn.Conv2d(64, 3, 1),
-<<<<<<< Updated upstream
             nn.Sigmoid()
-=======
-            nn.Sigmoid(),
->>>>>>> Stashed changes
         )
 
         # coordinate patching trick

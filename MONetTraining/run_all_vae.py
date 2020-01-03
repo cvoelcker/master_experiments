@@ -9,6 +9,7 @@ from config_parser.config_parser import ConfigGenerator
 from spatial_monet.spatial_monet import MaskedAIR
 from spatial_monet.genesis import GENESIS
 from spatial_monet.monet import Monet
+from models.baseline_broadcast_vae import BroadcastVAE
 
 from torch_runner.experiment_setup import setup_experiment, load_config, get_model, get_run_path
 from torch_runner.data import transformers, file_loaders, generators
@@ -16,15 +17,21 @@ from torch_runner.data.base import BasicDataSet
 from torch_runner.training_setup import setup_trainer
 from torch_runner.handlers import file_handler, tb_handler
 
-from trainer import MONetTrainer, GECOTrainer
+from trainer import MONetTrainer
 from util.data import generate_envs_data
 
-from models.baseline_broadcast_vae import BroadcastVAE
-
 all_games = [
-        'adventure', 'air_raid', 'alien', 'amidar', 'assault', 'asterix', 'asteroids', 'atlantis', 'bank_heist', 'battle_zone', 'beam_rider', 'berzerk', 'bowling', 'boxing', 'breakout', 'carnival', 'centipede', 'chopper_command', 'crazy_climber', 
-        # 'defender',  ## apparently, this is really broken
-        'demon_attack', 'double_dunk', 'elevator_action', 'enduro', 'fishing_derby', 'freeway', 'frostbite', 'gopher', 'gravitar', 'hero', 'ice_hockey', 'jamesbond', 'journey_escape', 'kangaroo', 'krull', 'kung_fu_master', 'montezuma_revenge', 'ms_pacman', 'name_this_game', 'phoenix', 'pitfall', 'pong', 'pooyan', 'private_eye', 'qbert', 'riverraid', 'road_runner', 'robotank', 'seaquest', 'skiing', 'solaris', 'space_invaders', 'star_gunner', 'tennis', 'time_pilot', 'tutankham', 'up_n_down', 'venture', 'video_pinball', 'wizard_of_wor', 'yars_revenge', 'zaxxon']
+        # 'assault',
+        'demon_attack',
+        'boxing',
+        'skiing',
+        'double_dunk',
+        'kung_fu_master',
+        'phoenix',
+        'beam_rider',
+        'asteroids',
+        'bank_heist'
+        ]
 
 all_games = [''.join((s.capitalize() for s in g.split('_'))) + '-v0' for g in all_games]
 
@@ -42,10 +49,10 @@ training_config = config.TRAINING
 
 print('running second half')
 l = len(all_games)
-for game in all_games[l//2:]:
+for game in all_games:
         print('Running {}'.format(game))
-        # monet = nn.DataParallel(Monet(**config.MODULE._asdict())).cuda()
         monet = nn.DataParallel(BroadcastVAE(**config.MODULE._asdict())).cuda()
+        # monet = nn.DataParallel(Monet(config.MODULE, 128, 128)).cuda()
         print('Generated model')
         env = gym.make(game)
         
@@ -72,8 +79,6 @@ for game in all_games[l//2:]:
         tb_logger = tb_handler.NStepTbHandler(config.EXPERIMENT.log_every, run_path, 'logging_{}'.format(game), log_name_list=['loss', 'kl_loss', 'mask_loss', 'p_x_loss'])
         print('Running training')
         trainer.register_handler(tb_logger)
-
-        # trainer.ready()
         
         # MONet init block
         # for w in trainer.model.parameters():
@@ -81,5 +86,5 @@ for game in all_games[l//2:]:
         #     torch.nn.init.normal_(w, mean=0., std=std_init)
         # trainer.model.init_background_weights(trainer.train_dataloader.dataset.get_all())
         
-        trainer.train(config.TRAINING.epochs, train_only=True)
+        trainer.train(config.TRAINING.epochs, train_only=True, visdom=False)
         env.close()

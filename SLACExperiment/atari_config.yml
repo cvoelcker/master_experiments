@@ -1,7 +1,7 @@
 EXPERIMENT:
-    experiment: rl
     game: DemonAttack-v0
-    run_name: demon-attack
+    experiment: rl
+    run_name: atari_test
     experiment_dir: experiments
     overwrite: False
     load_run: False
@@ -12,67 +12,70 @@ EXPERIMENT:
     random_seed: False
     pretrain_model: False
     pretrain_img: False
+    algorithm: slac
 RL:
   exploration_steps: 4
   action_force: 0.6
+  eval_epochs: 100
   combined_nets: true
-  eval_epochs: 1
   use_stove: True
 MODULE:
     SLAC:
         QNET:
         POLICY:
-        rl_lr: 0.0001
+        rl_lr: 0.0003
         latent_lr: 0.0001
         update_steps_latent: 1
         update_steps_rl: 1
         update_target_steps: 1
         grad_clip_model: 20
-        grad_clip_rl: 10
-        initial_alpha: 0.5
+        grad_clip_rl: 50
+        initial_alpha: 0.05
         target_gamma: 0.999
         debug: False
-        slac_latent_dim: 256
-    MONET:
-        latent_dim: 4
-        background_latent_dim: 1
-        latent_prior: 1.0
-        patch_shape:
-        - 16
-        - 16
-        image_shape:
-        - 64
-        - 64
-        bg_sigma: 0.01
-        fg_sigma: 0.05
-        num_blocks: 2
-        channel_base: 8
-        num_slots: 6
-        beta: 1.0
-        gamma: 0.1
-        constrain_theta: False
-        predict_masks: False
-    STOVE:
-        action_conditioned: True
-        supairvised: False
-        cl: 64
-        debug_test_mode: False
-        skip: 2
-        debug_fix_supair: True
-        debug_match_appearance: False
-        debug_no_latents: False
-        dyn_recon_weight: 0.
+        slac_latent_dim: 64
     DYNAMICS:
-        debug_nonlinear: 'relu'
+        action_space: 6
         debug_latent_q_std: 0.04
-        debug_xavier: False
+        debug_nonlinear: relu
+        debug_xavier: false
+        num_dynamics: 2
+        pos_var: 0.3
         transition_lik_std:
         - 0.01
         - 0.01
         - 0.01
         - 0.01
-        pos_var: 0.3
-        action_space: 6
+    MONET:
+        background_latent_dim: 1
+        beta: 1.0
+        bg_sigma: 0.01
+        channel_base: 8
+        constrain_theta: true
+        fg_sigma: 0.05
+        gamma: 0.1
+        image_shape:
+        - 64
+        - 64
+        latent_dim: 8
+        latent_prior: 1.0
+        max_obj_size: 0.2
+        num_blocks: 2
+        num_slots: 8
+        patch_shape:
+        - 16
+        - 16
+        predict_masks: false
+    STOVE:
+        action_conditioned: true
+        cl: 128
+        debug_fix_supair: true
+        debug_match_appearance: false
+        debug_no_latents: false
+        debug_test_mode: false
+        dyn_recon_weight: 0.0
+        skip: 2
+        supairvised: false
 TRAINING:
     optimizer:
         optimizer_name: Adam
@@ -87,15 +90,15 @@ TRAINING:
     clip_gradient: True
     clip_gradient_value: 20
     pretrain: True
-    rl_batch_size: 32
+    rl_batch_size: 64
     total_steps: 100000
 DATA:
     data_name: billards
     data_dir: data/avoidance_train.pkl
     type: directory
     shape:
-        - 64
-        - 64
+        - 128
+        - 128
         - 3
     transform:
         - reshape

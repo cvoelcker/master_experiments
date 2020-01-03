@@ -153,6 +153,7 @@ class AbstractQNet(nn.Module):
         q = F.softmax(self(s), -1)
         # v_function = torch.logsumexp(q, 1, keepdim=True)
         # policy = torch.exp(q - v_function)
+        q = flatten_probs(q, 0.01)
         dist = torch.distributions.Categorical(probs = q)
         return dist.sample(), q, torch.log(q)
 
@@ -278,9 +279,13 @@ class ImageQNet(AbstractQNet):
         )
         c = int(((shape[0] / (2 ** 3)) ** 2) * 64)
         self.linear = nn.Sequential(
-            nn.Linear(c, 64),
-            nn.Linear(64, 32),
-            nn.Linear(32, action_space),
+            nn.Linear(c, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Linear(64, action_space),
         )
         self.action_space = action_space
 
