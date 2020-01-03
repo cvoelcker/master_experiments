@@ -138,7 +138,7 @@ class SLACTrainer(RLTrainer):
         self.env = env
         self.eval_env = copy.deepcopy(env)
         self.done = False
-        self.obs, self.latents = self.init_latent(self.env)
+        self.obs, self.latents, self.a = self.init_latent(self.env)
         self.eval_epochs = config.eval_epochs
         self.eval_every = 2500
 
@@ -154,21 +154,26 @@ class SLACTrainer(RLTrainer):
             i = 0
             while i < steps:
                 i += 1
-                obs.append(self.obs)
-                action, _, _ = self.model.q_1.sample_action(self.latents.cuda())
+                obs.append(self.obs[-1])
+                action, _, _ = self.model.q_1.sample_action(self.latents.cuda()[:, -1])
                 action = action.detach().cpu().numpy()
                 actions.append(action)
-                self.obs, r, d, _ = self.env.step(action)
+                # print(action)
+                new_obs, r, d, _ = self.env.step(action)
+                self.obs[:3] = self.obs[1:]
+                self.obs[3] = new_obs
+                self.a[:3] = self.a[1:]
+                self.a[3] = action
                 r_s.append(r)
                 d_s.append(d)
                 if d:
                     i += 4
-                    self.obs, self.latents = self.init_latent(self.env)
+                    self.obs, self.latents, self.a = self.init_latent(self.env)
                 else:
-                    _obs = self.memory.resize(self.obs)
-                    _obs = self.memory.torch_transform(_obs[np.newaxis, :]).unsqueeze(0)
-                    action = self.memory.torch_transform(action[np.newaxis, :], action_expand=True)
-                    self.latents = self.model.model.update_latent(_obs, action, self.latents.cuda())
+                    _obs = np.stack([self.memory.resize(o) for o in self.obs], 0)
+                    _obs = self.memory.torch_transform(_obs[np.newaxis, :])
+                    action = self.memory.torch_transform(self.a, action_expand=True).unsqueeze(0)
+                    self.latents = self.model.model.infer_latent(_obs, action, skip=2)
         obs = np.stack(obs, 0)
         actions = np.stack(actions, 0).squeeze(-1)
         r_s = np.stack(r_s, 0)
@@ -196,7 +201,7 @@ class SLACTrainer(RLTrainer):
         a = self.memory.torch_transform(np.stack(initial_sample_a, 0)[np.newaxis, :], action_expand=True)
         latent = self.model.model.infer_latent(obs, a)
         # only return final latent
-        return last_obs, latent[:, -1]
+        return np.stack(initial_sample_obs, 0), latent, np.stack(initial_sample_a)
 
     def eval(self):
         full_model_state = {
@@ -210,24 +215,29 @@ class SLACTrainer(RLTrainer):
             }
         }
         self.notify_epoch_handlers(full_model_state)
-        returns = np.zeros((self.eval_epochs, 10000), dtype=np.int8)
-        all_obs = np.zeros((self.eval_epochs, 10000, *self.eval_env.observation_space.shape))
+        returns = np.zeros((self.eval_epochs, 100), dtype=np.int8)
+        all_obs = np.zeros((self.eval_epochs, 100, *self.eval_env.observation_space.shape))
         with torch.no_grad():
             for i in range(self.eval_epochs):
-                eval_obs, eval_latents = self.init_latent(self.eval_env)
-                for j in range(10000):
-                    all_obs[i, j] = eval_obs
-                    action, _, _ = self.model.q_1.sample_max_action(eval_latents.cuda())
+                eval_obs, eval_latents, a_s = self.init_latent(self.eval_env)
+                for j in range(100):
+                    all_obs[i, j] = eval_obs[-1]
+                    action, _, _ = self.model.q_1.sample_max_action(eval_latents.cuda()[:, -1])
                     action = action.detach().cpu().numpy()
-                    eval_obs, r, d, info = self.eval_env.step(action)
+                    new_obs, r, d, info = self.eval_env.step(action)
+                    eval_obs[:3] = eval_obs[1:]
+                    eval_obs[3] = new_obs
+                    a_s[:3] = a_s[1:]
+                    a_s[3] = action
                     returns[i, j] = r
                     if d:
-                        eval_obs, eval_latents = self.init_latent(self.eval_env, write=False)
+                        eval_obs, eval_latents, a_s = self.init_latent(self.eval_env, write=False)
                     else:
-                        _obs = self.memory.resize(eval_obs)
-                        _obs = self.memory.torch_transform(_obs[np.newaxis, :]).unsqueeze(0)
-                        action = self.memory.torch_transform(action[np.newaxis, :], action_expand=True)
-                        eval_latents = self.model.model.update_latent(_obs, action, eval_latents.cuda())
+                        _obs = np.stack([self.memory.resize(o) for o in eval_obs])
+                        _obs = self.memory.torch_transform(_obs[np.newaxis, :])
+                        action = self.memory.torch_transform(a_s, action_expand=True).unsqueeze(0)
+                        _eval_latents = self.model.model.infer_latent(_obs, action, skip=2)
+                        eval_latents = _eval_latents
         return np.mean(np.sum(returns, -1)), np.var(np.sum(returns, -1)), all_obs
     
     def pretrain(self, batch_size, epochs, img=False):

@@ -532,19 +532,19 @@ class MONetStove(nn.Module):
         else:
             return self.stove_forward(x, actions=actions, mask=mask, rewards=rewards)
 
-    def infer_latent(self, obs, actions):
+    def infer_latent(self, obs, actions, skip=2):
         z_img, z_img_std, _ = self.encode_sort_img(obs)
-        z_tuple = self.infer_dynamics(obs, actions, z_img, z_img_std, skip=2)
+        z_tuple = self.infer_dynamics(obs, actions, z_img, z_img_std, skip=skip)
         return z_tuple[0]
 
-    def update_latent(self, obs, actions, latent):
+    def update_latent(self, obs, actions, latent, skip=2):
         # if a sequence should be appended with more latents
         z_img, z_img_std, _ = self.encode_sort_img(obs, latent)
+        # print(z_img.shape)
         # quick workaround used, since the obs is not used to infer the first latent
         # anymore and can therefore not be discarded
-        obs = torch.cat([obs[:, 0:1], obs], 1)
-        z_img = torch.cat([z_img[:, 0:1], z_img], 1)
-        z_img_std = torch.cat([z_img_std[:, 0:1], z_img_std], 1)
-        z, _, _, _, _, _, _ = self.infer_dynamics(obs, actions, z_img, z_img_std, last_z=latent, skip=1)
-        print(z.mean(-1))
+        # obs = torch.cat([obs[:, 0:1], obs], 1)
+        # z_img = torch.cat([z_img[:, 0:1], z_img], 1)
+        # z_img_std = torch.cat([z_img_std[:, 0:1], z_img_std], 1)
+        z, _, _, _, _, _, _ = self.infer_dynamics(obs, actions, z_img, z_img_std, last_z=latent, skip=skip)
         return z[:, -1]
