@@ -140,7 +140,7 @@ class SLACTrainer(RLTrainer):
         self.done = False
         self.obs, self.latents, self.a = self.init_latent(self.env)
         self.eval_epochs = config.eval_epochs
-        self.eval_every = 2500
+        self.eval_every = 100
 
         self.exploration_steps = config.exploration_steps
     
@@ -231,6 +231,7 @@ class SLACTrainer(RLTrainer):
                     a_s[3] = action
                     returns[i, j] = r
                     if d:
+<<<<<<< Updated upstream
                         eval_obs, eval_latents, a_s = self.init_latent(self.eval_env, write=False)
                     else:
                         _obs = np.stack([self.memory.resize(o) for o in eval_obs])
@@ -238,6 +239,20 @@ class SLACTrainer(RLTrainer):
                         action = self.memory.torch_transform(a_s, action_expand=True).unsqueeze(0)
                         _eval_latents = self.model.model.infer_latent(_obs, action, skip=2)
                         eval_latents = _eval_latents
+=======
+                        print('reset')
+                        eval_obs, eval_latents = self.init_latent(self.eval_env, write=False)
+                    else:
+                        _obs = self.memory.resize(last_obs)
+                        _obs = self.memory.torch_transform(_obs[np.newaxis, :]).unsqueeze(0)
+                        action = self.memory.torch_transform(action[np.newaxis, :], action_expand=True)
+                        _eval_latents = self.model.model.update_latent(_obs, action, eval_latents.cuda())
+                        if torch.sum(_eval_latents - eval_latents) > 0.:
+                            print('Something happened')
+                        eval_latents = _eval_latents
+                    last_obs = eval_obs
+                    all_obs[i, j] = eval_obs
+>>>>>>> Stashed changes
         return np.mean(np.sum(returns, -1)), np.var(np.sum(returns, -1)), all_obs
     
     def pretrain(self, batch_size, epochs, img=False):

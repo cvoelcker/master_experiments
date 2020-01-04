@@ -23,10 +23,14 @@ def get_latent_model(config, model_class, load_run, run_name, run_number):
         if load_run or run_name == 'cheat':
             print('Loading old model')
             path = get_run_path(config.EXPERIMENT.experiment_dir, run_name, run_number)
+<<<<<<< Updated upstream
             if run_name == 'cheat':
                 path = '../STOVETraining/experiments/visdom-test/run_029/'
             if run_name == 'atari_test':
                 path = 'atari-stove-save/run_000/'
+=======
+            path = '../STOVETraining/experiments/visdom-test/run_029/'
+>>>>>>> Stashed changes
             path = os.path.join(path, 'checkpoints')
             if not os.path.exists(path):
                 print('Found no model checkpoints')

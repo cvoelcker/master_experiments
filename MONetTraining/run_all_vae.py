@@ -21,7 +21,7 @@ from trainer import MONetTrainer
 from util.data import generate_envs_data
 
 all_games = [
-        # 'assault',
+        'assault',
         'demon_attack',
         'boxing',
         'skiing',

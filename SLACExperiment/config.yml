@@ -30,8 +30,13 @@ MODULE:
         update_target_steps: 1
         grad_clip_model: 20
         grad_clip_rl: 50
+<<<<<<< Updated upstream
         initial_alpha: 0.05
         target_gamma: 0.999
+=======
+        initial_alpha: 0.1
+        target_gamma: 0.995
+>>>>>>> Stashed changes
         debug: False
         slac_latent_dim: 64
     MONET:

@@ -18,9 +18,15 @@ EXPERIMENT:
   load_run: false
   log_every: 50
   overwrite: false
+<<<<<<< Updated upstream
   pretrain_img: true
   pretrain_model: true
   random_seed: false
+=======
+  pretrain_img: false
+  pretrain_model: false
+  random_seed: true
+>>>>>>> Stashed changes
   run_name: slac-hp-tuning
   run_number: 0
   seed: 0
@@ -30,7 +36,11 @@ MODULE:
     debug_latent_q_std: 0.04
     debug_nonlinear: relu
     debug_xavier: false
+<<<<<<< Updated upstream
     num_dynamics: 2
+=======
+    num_dynamics: 1
+>>>>>>> Stashed changes
     pos_var: 0.3
     transition_lik_std:
     - 0.01
@@ -63,7 +73,11 @@ MODULE:
     debug: false
     grad_clip_model: 30
     grad_clip_rl: 50
+<<<<<<< Updated upstream
     initial_alpha: 0.1
+=======
+    initial_alpha: 0.05
+>>>>>>> Stashed changes
     latent_lr: 0.0001
     rl_lr: 0.0003
     slac_latent_dim: 64

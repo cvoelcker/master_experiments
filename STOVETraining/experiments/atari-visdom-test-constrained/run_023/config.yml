@@ -22,7 +22,6 @@ EXPERIMENT:
   run_name: atari-visdom-test-constrained
   run_number: 21
   seed: 0
-  model: m-stove
 MODULE:
   DYNAMICS:
     action_space: 6

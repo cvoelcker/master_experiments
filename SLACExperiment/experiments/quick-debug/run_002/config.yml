@@ -2,13 +2,8 @@ DATA:
   data_dir: data/avoidance_train.pkl
   data_name: billards
   shape:
-<<<<<<< Updated upstream
   - 32
   - 32
-=======
-  - 64
-  - 64
->>>>>>> Stashed changes
   - 3
   transform:
   - reshape
@@ -23,16 +18,10 @@ EXPERIMENT:
   load_run: false
   log_every: 50
   overwrite: false
-<<<<<<< Updated upstream
-  pretrain_img: true
-  pretrain_model: true
-  random_seed: false
-=======
   pretrain_img: false
-  pretrain_model: true
-  random_seed: true
->>>>>>> Stashed changes
-  run_name: slac-hp-tuning
+  pretrain_model: false
+  random_seed: false
+  run_name: quick-debug
   run_number: 0
   seed: 0
 MODULE:
@@ -41,11 +30,7 @@ MODULE:
     debug_latent_q_std: 0.04
     debug_nonlinear: relu
     debug_xavier: false
-<<<<<<< Updated upstream
-    num_dynamics: 2
-=======
     num_dynamics: 1
->>>>>>> Stashed changes
     pos_var: 0.3
     transition_lik_std:
     - 0.01
@@ -55,17 +40,17 @@ MODULE:
   MONET:
     background_latent_dim: 1
     beta: 1.0
-    bg_sigma: 0.09
+    bg_sigma: 0.01
     channel_base: 8
     constrain_theta: true
-    fg_sigma: 0.11
+    fg_sigma: 0.05
     gamma: 0.1
     image_shape:
     - 32
     - 32
     latent_dim: 4
     latent_prior: 1.0
-    max_obj_size: 0.3
+    max_obj_size: 0.8
     num_blocks: 2
     num_slots: 3
     patch_shape:
@@ -76,21 +61,13 @@ MODULE:
     POLICY: null
     QNET: null
     debug: false
-    grad_clip_model: 30
+    grad_clip_model: 20
     grad_clip_rl: 50
-<<<<<<< Updated upstream
     initial_alpha: 0.1
     latent_lr: 0.0001
     rl_lr: 0.0003
     slac_latent_dim: 64
     target_gamma: 0.995
-=======
-    initial_alpha: 0.2
-    latent_lr: 0.0001
-    rl_lr: 0.0003
-    slac_latent_dim: 64
-    target_gamma: 0.999
->>>>>>> Stashed changes
     update_steps_latent: 1
     update_steps_rl: 1
     update_target_steps: 1
@@ -107,20 +84,16 @@ MODULE:
 RL:
   action_force: 0.6
   combined_nets: true
-  eval_epochs: 100
+  eval_epochs: 10
   exploration_steps: 4
   use_stove: true
 TRAINING:
-  batch_size: 64
+  batch_size: 2
   clip_gradient: true
   clip_gradient_value: 20
   decay_rate: 0.99
   decay_schedule: 1
-<<<<<<< Updated upstream
-  epochs: 5
-=======
-  epochs: 50
->>>>>>> Stashed changes
+  epochs: 10
   optimizer:
     lr: 0.0003
     optimizer_name: Adam
